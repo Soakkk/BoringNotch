@@ -117,7 +117,11 @@ def main():
         run('ditto', args.app, app)
         resources = app / 'Contents/Resources'
         shutil.copy2(ROOT / 'LICENSE', resources / 'COPYING')
-        shutil.copytree(ROOT / 'THIRD_PARTY_LICENSES', resources / 'THIRD_PARTY_LICENSES', dirs_exist_ok=True)
+        licenses = ROOT / 'THIRD_PARTY_LICENSES'
+        if licenses.is_dir():
+            shutil.copytree(licenses, resources / 'THIRD_PARTY_LICENSES', dirs_exist_ok=True)
+        else:
+            shutil.copy2(licenses, resources / 'THIRD_PARTY_LICENSES')
         (resources / 'PERSONAL_SOURCE.txt').write_text(
             f"BoringNotch Personal is a GPL fork of TheBoredTeam/boring.notch.\n"
             f"Corresponding source: https://github.com/{META['repository']}/tree/{args.source_sha}\n")
