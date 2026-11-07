@@ -56,7 +56,7 @@ class MusicManager: ObservableObject {
 
     private var artworkData: Data? = nil
 
-    // Store last values at the time artwork was changed
+    // Last processed track metadata, even when consecutive tracks share artwork.
     private var lastArtworkTitle: String = ""
     private var lastArtworkArtist: String = ""
     private var lastArtworkAlbum: String = ""
@@ -194,7 +194,7 @@ class MusicManager: ObservableObject {
             }
         }
 
-        // Check for changes in track metadata using last artwork change values
+        // Metadata and artwork can arrive separately or share the same image.
         let titleChanged = state.title != self.lastArtworkTitle
         let artistChanged = state.artist != self.lastArtworkArtist
         let albumChanged = state.album != self.lastArtworkAlbum
@@ -202,7 +202,8 @@ class MusicManager: ObservableObject {
 
         // Check for artwork changes
         let artworkChanged = state.artwork != nil && state.artwork != self.artworkData
-        let hasContentChange = titleChanged || artistChanged || albumChanged || artworkChanged || bundleChanged
+        let metadataChanged = titleChanged || artistChanged || albumChanged || bundleChanged
+        let hasContentChange = metadataChanged || artworkChanged
 
         // Handle artwork and visual transitions for changed content
         if hasContentChange {
@@ -219,21 +220,22 @@ class MusicManager: ObservableObject {
             }
             self.artworkData = state.artwork
 
-            if artworkChanged || state.artwork == nil {
-                // Update last artwork change values
-                self.lastArtworkTitle = state.title
-                self.lastArtworkArtist = state.artist
-                self.lastArtworkAlbum = state.album
-                self.lastArtworkBundleIdentifier = state.bundleIdentifier
-            }
+            // Remember every processed track. Waiting for a different image would
+            // repeat this work on every later update of a same-album track.
+            self.lastArtworkTitle = state.title
+            self.lastArtworkArtist = state.artist
+            self.lastArtworkAlbum = state.album
+            self.lastArtworkBundleIdentifier = state.bundleIdentifier
 
             // Only update sneak peek if there's actual content and something changed
             if !state.title.isEmpty && !state.artist.isEmpty && state.isPlaying {
                 self.updateSneakPeek()
             }
 
-            // Fetch lyrics on content change
-            self.fetchLyricsIfAvailable(bundleIdentifier: state.bundleIdentifier, title: state.title, artist: state.artist)
+            // A late cover image does not require another lookup for the same song.
+            if metadataChanged {
+                self.fetchLyricsIfAvailable(bundleIdentifier: state.bundleIdentifier, title: state.title, artist: state.artist)
+            }
         }
 
         let timeChanged = state.currentTime != self.elapsedTime
