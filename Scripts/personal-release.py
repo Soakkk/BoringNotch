@@ -141,7 +141,7 @@ def main():
         ET.SubElement(item, 'title').text = META['name'] + ' ' + META['version']
         ET.SubElement(item, f'{{{SPARKLE}}}version').text = META['build']
         ET.SubElement(item, f'{{{SPARKLE}}}shortVersionString').text = META['version']
-        ET.SubElement(item, f'{{{SPARKLE}}}minimumSystemVersion').text = '14.0.0'
+        ET.SubElement(item, f'{{{SPARKLE}}}minimumSystemVersion').text = '15.0.0'
         ET.SubElement(item, 'pubDate').text = datetime.datetime.now(datetime.timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')
         ET.SubElement(item, 'description').text = 'Compact agenda and music, with quieter rendering. Personal ad-hoc build; source and GPL license included.'
         ET.SubElement(item, 'enclosure', {

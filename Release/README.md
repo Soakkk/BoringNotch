@@ -1,6 +1,6 @@
 # Personal release
 
-This GPL fork keeps upstream authorship and third-party licenses. Personal version, identifiers and feed live in `personal.json`; the Xcode project and application plist must agree. Keep the application name and installation path stable and increase the numeric build for each update. The app and XPC helper are universal arm64/x86_64, with minimum macOS 14.
+This GPL fork keeps upstream authorship and third-party licenses. Personal version, identifiers and feed live in `personal.json`; the Xcode project and application plist must agree. Keep the application name and installation path stable and increase the numeric build for each update. The app and XPC helper are universal arm64/x86_64, with minimum macOS 15 (the bundled MediaRemoteAdapter requires macOS15).
 
 `Scripts/build-personal.sh` resolves only the committed package versions and compiles both targets without Apple certificates or provisioning. `Personal build` only runs manually, at an explicit full commit SHA. Its default unsigned ZIP preserves executable permissions and framework symlinks. Source archives, logs and private keys are never release assets.
 

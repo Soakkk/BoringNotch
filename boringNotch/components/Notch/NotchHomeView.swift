@@ -455,7 +455,7 @@ struct NotchHomeView: View {
                 PersonalAgendaSurface(
                     heading: agendaHeading, items: agendaItems,
                     detailed: agendaDetail, loading: calendarManager.isLoading,
-                    denied: calendarManager.calendarAuthorizationStatus != .fullAccess && calendarManager.calendarAuthorizationStatus != .writeOnly,
+                    denied: calendarManager.calendarAuthorizationStatus != .fullAccess && calendarManager.reminderAuthorizationStatus != .fullAccess,
                     onBack: { agendaDetail = false }, onDetail: { agendaDetail = true },
                     onPrevious: { changeDay(-1) }, onNext: { changeDay(1) },
                     onToday: { selectedDate = Calendar.current.startOfDay(for: Date()) },
