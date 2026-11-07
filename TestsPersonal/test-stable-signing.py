@@ -94,6 +94,9 @@ class StableSigningTests(unittest.TestCase):
         return app, helper
 
     def test_updates_share_identity_and_reject_adhoc_replacements(self):
+        # This test uses disposable identities only. Preserve native diagnostics
+        # for CI differences; credential-error tests exercise the safe wrapper.
+        self.enterContext(patch('personal_codesign.private_command', side_effect=run))
         search_list = run('security', 'list-keychains', '-d', 'user')
         first = self.fixture('first', 1)
         second = self.fixture('second', 2)
