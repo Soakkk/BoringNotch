@@ -25,21 +25,21 @@ import SwiftUI
                 HStack { Image(systemName: "house"); Spacer(); Image(systemName: "gear"); Text("80%") }.font(.system(size: 11)).frame(height: 28)
                 HStack(spacing: 16) {
                     if !detailed {
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 10) {
-                                RoundedRectangle(cornerRadius: theme.artworkRadius)
+                        PersonalMusicLayout(artworkSize: layout.artworkSize, controlsWidth: 96,
+                            artwork: RoundedRectangle(cornerRadius: theme.artworkRadius)
                                     .fill(theme.accent.opacity(0.16))
-                                    .overlay(Image(systemName: "music.note").font(.system(size: 22)).foregroundStyle(theme.accent))
-                                    .frame(width: layout.artworkSize, height: layout.artworkSize)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Night Walk").font(.headline).lineLimit(1)
-                                    Text("Ambient Sessions").font(.subheadline).foregroundStyle(theme.secondary).lineLimit(1)
-                                }
+                                    .overlay(Image(systemName: "music.note").font(.system(size: 22)).foregroundStyle(theme.accent)),
+                            metadata: { _ in PersonalSongMetadata(title: "Night Walk", artist: "Ambient Sessions") },
+                            controls: HStack(spacing: 6) {
+                                HoverButton(icon: "backward.fill", compact: true) {}
+                                HoverButton(icon: state == "paused" ? "play.fill" : "pause.fill", scale: .large, compact: true) {}
+                                HoverButton(icon: "forward.fill", compact: true) {}
+                            }.frame(maxWidth: .infinity, alignment: .leading),
+                            progress: VStack(spacing: 5) {
+                                Capsule().fill(theme.accent).frame(height: 3)
+                                HStack { Text("1:24"); Spacer(); Text("4:32") }.font(.system(size: 10)).foregroundStyle(theme.secondary)
                             }
-                            Capsule().fill(theme.accent).frame(height: 3)
-                            HStack { Text("1:24"); Spacer(); Text("4:32") }.font(.system(size: 10)).foregroundStyle(theme.secondary)
-                            HStack(spacing: 22) { Image(systemName: "backward.fill"); Image(systemName: state == "paused" ? "play.fill" : "pause.fill"); Image(systemName: "forward.fill") }.frame(maxWidth: .infinity)
-                        }.frame(width: layout.musicWidth, height: 128)
+                        ).frame(width: layout.musicWidth, height: 128)
                         Rectangle().fill(theme.separator).frame(width: 1, height: 116)
                     }
                     surface
