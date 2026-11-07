@@ -13,7 +13,7 @@ Variante personal de [TheBoringNotch](https://github.com/TheBoredTeam/boring.not
 
 ## Instalación y actualizaciones
 
-macOS 15 o posterior; Apple Silicon e Intel. Descarga el instalador de [Releases](https://github.com/Soakkk/BoringNotch/releases). La versión 3.1.3 (build 301003) introduce una firma personal estable para conservar los permisos entre actualizaciones. El cambio inicial desde la firma anterior puede pedir autorizarlos una vez. Conserva los indicadores segmentados, la distribución musical lateral, la agenda adaptativa, los temas y el ahorro inteligente. Sustituye siempre la misma copia de **BoringNotch Personal.app** en Aplicaciones.
+macOS 15 o posterior; Apple Silicon e Intel. Descarga el instalador de [Releases](https://github.com/Soakkk/BoringNotch/releases). La versión 3.1.4 (build 301004) introduce una firma personal estable para conservar los permisos entre actualizaciones. El cambio inicial desde la firma anterior puede pedir autorizarlos una vez. Conserva los indicadores segmentados, la distribución musical lateral, la agenda adaptativa, los temas y el ahorro inteligente. Sustituye siempre la misma copia de **BoringNotch Personal.app** en Aplicaciones.
 
 Las comprobaciones y descargas automáticas están activadas por defecto. Se pueden cambiar en los ajustes de la app. El canal estable propio utiliza un appcast firmado y archivos de actualización firmados con Ed25519. Las actualizaciones originales se incorporan revisando el código del proyecto de origen.
 

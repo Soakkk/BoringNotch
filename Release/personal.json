@@ -1,7 +1,7 @@
 {
   "name": "BoringNotch Personal",
-  "version": "3.1.3",
-  "build": "301003",
+  "version": "3.1.4",
+  "build": "301004",
   "bundle_id": "com.soakkk.BoringNotch",
   "helper_id": "com.soakkk.BoringNotch.BoringNotchXPCHelper",
   "repository": "Soakkk/BoringNotch",
