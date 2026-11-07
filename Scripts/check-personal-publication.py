@@ -15,6 +15,8 @@ manifest = json.loads((folder / 'release-manifest.json').read_text())
 for key, value in meta.items():
     assert manifest[key] == value, f'Release metadata mismatch: {key}'
 assert manifest['source_sha'] == os.environ['SOURCE_SHA'], 'Release source mismatch'
+if manifest.get('signing') == 'ad-hoc':
+    assert manifest.get('library_validation_exception') is True, 'Ad-hoc publication requires the reviewed app-only library-validation exception'
 basename = f"BoringNotch-Personal-{meta['version']}"
 allowed = {basename + '.zip', basename + '.dmg', 'SHA256SUMS', 'personal-appcast.xml', 'release-manifest.json'}
 assert {p.name for p in folder.iterdir()} == allowed, 'Unexpected release asset'
