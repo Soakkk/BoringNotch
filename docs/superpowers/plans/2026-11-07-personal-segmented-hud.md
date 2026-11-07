@@ -47,15 +47,18 @@
 
 - [x] Run appropriate existing regressions, release-signature and publication-guard checks; expected all pass.
 - [x] Build the reviewed commit through `personal-build.yml` with publication disabled. Verify archive/feed signatures, hashes, identifiers and universal app/helper.
-- [ ] Back up the current installation, gracefully quit, replace the same app and relaunch. Verify indicator settings, restored permissions, normal panel behavior and resource use.
+- [x] Back up the current installation, gracefully quit, replace the same app and relaunch. Verify indicator settings, restored permissions, normal panel behavior and resource use.
 - [x] Merge reviewed source, publish five verified assets, then activate the exact signed feed bytes last. Verify anonymous downloads and feed.
-- [ ] Record installed version, checks and any remaining user-only hardware-key verification.
+- [x] Record installed version, checks and any remaining user-only hardware-key verification.
 
-## Release evidence and pending local verification
+## Release and local verification evidence
 
 - Reviewed source: `993a316d6965671b22224b46d2f38441e6a02cd1`; PR [#4](https://github.com/Soakkk/BoringNotch/pull/4) merged.
 - Universal build and signed packaging: [run 42395876685](https://github.com/Soakkk/BoringNotch/actions/runs/42395876685), successful.
 - 27 native HUD checks and seven native render fixtures; energy 24, decoration 25, adaptive layout 14, music 8. The independent review's unsafe inline percentage conversion was fixed with a failing regression first.
 - [Personal 3.1.2](https://github.com/Soakkk/BoringNotch/releases/tag/personal-v3.1.2) has the five expected assets. Anonymous downloads match local SHA-256 hashes. The active feed matches the signed release bytes and verifies with the pinned Ed25519 key.
 - Local version 3.1.2/build 301002 replaces the existing Applications copy; its source marker, universal app/helper, deep code signature, sandbox and existing app-only library exception were verified. The previous copy is recoverable and preferences are preserved.
-- Local verification is **not yet complete**: macOS still associates Accessibility and Calendar authorization with the previous ad-hoc binary. The native renewal flow is paused at the user's Touch ID/password prompt. After authorization, re-add the current app, restore the existing calendar/reminder grants as needed, verify media-key HUDs and sample settled resource use. Publication is complete; these local checks remain outstanding.
+- Local verification completed: the user confirmed that both physical volume and brightness keys display segmented indicators. The running app's closed volume HUD was also visually inspected at 56%; normal music/calendar layout, auto-hide and calendar/reminder selections remain available.
+- The stale ad-hoc Accessibility grant was renewed by removing its old entry and adding the current Applications copy after user authentication. Calendar and reminder switches alone retained the old code requirement; targeted `tccutil reset Calendar com.soakkk.BoringNotch` and `tccutil reset Reminders com.soakkk.BoringNotch`, an app restart and the user's acceptance of the native prompts restored the existing grants. No global resets or expanded permissions were used.
+- Ahorro inteligente was found disabled and enabled in the native UI to honor the user's low-consumption preference. Automatic update checks and downloads are enabled. Sparkle's native check confirms that Personal 3.1.2 is the newest version.
+- Settled sample with music paused and settings closed: 25.07 seconds, app/helper CPU both 0.0% at the resolution of `ps` accumulated CPU time; resident memory 122.3/7.1 MiB. This is an idle smoke check, not a battery-life benchmark. All planned checks are complete.
