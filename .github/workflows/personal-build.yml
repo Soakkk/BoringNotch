@@ -1,0 +1,51 @@
+name: Personal build
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full commit SHA to build
+        required: true
+        type: string
+      publish:
+        description: Publish a reviewed release and signed feed (not implemented yet)
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+concurrency:
+  group: personal-${{ inputs.source_sha }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Validate request
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PUBLISH" == false ]]
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - name: Build unsigned universal app and helper
+        run: bash Scripts/build-personal.sh
+      - name: Upload packaged preview
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: personal-unsigned-${{ inputs.source_sha }}
+          path: build/personal/BoringNotch-Personal-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: personal-build-log-${{ inputs.source_sha }}
+          path: build/personal/xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 7
