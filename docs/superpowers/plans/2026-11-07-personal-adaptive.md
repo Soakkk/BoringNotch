@@ -33,3 +33,5 @@ Keep640×190pt opened and640×210pt host. Hide normally. No pinning/new event ac
 - Native fixtures:18 combinations of three themes and summary/paused/detail/empty/denied/loading at640×190. Actual agenda component rendered; music fixture is representative and installed production player still requires visual verification.
 - Fresh whole-change review found two multiline marquee call sites missing the energy gate. Both corrected to match the title; child MarqueeText native pause/static regression verifies the same stop path. No other actionable review findings.
 - Spanish catalog reviewed and dynamic settings/onboarding/media/battery/camera labels localized, preserving non-Spanish entries and formatted placeholders.
+
+- CI42372361536 rejected writing the read-only SwiftUI accessibilityReduceMotion environment value. Replaced that injection with a backward-compatible animationEnabled face parameter. Native pixel-motion regression demonstrated failure when disabled was ignored; verified static face beyond the blink interval after gating the cancellable task.

@@ -126,6 +126,19 @@ struct DecorationLifecycleTests {
         check(snapshot(host) == openEyes, "face reopens its eyes after blinking")
         host.rootView = AnyView(EmptyView())
         pump()
+        host.rootView = AnyView(MinimalFaceFeatures(animationEnabled: false))
+        host.layoutSubtreeIfNeeded()
+        pump()
+        let stillFace = snapshot(host)
+        let stillDeadline = Date(timeIntervalSinceNow: 3.4)
+        var stayedStill = true
+        while Date() < stillDeadline {
+            pump(0.02)
+            if snapshot(host) != stillFace { stayedStill = false; break }
+        }
+        check(stayedStill, "energy saving keeps the face static beyond its blink interval")
+        host.rootView = AnyView(EmptyView())
+        pump()
         let faceStart = ScheduledTimers.timers.count
         for _ in 0..<3 {
             host.rootView = AnyView(MinimalFaceFeatures())

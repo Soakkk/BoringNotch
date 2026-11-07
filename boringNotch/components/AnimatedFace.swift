@@ -7,6 +7,7 @@
 import SwiftUI
 
 struct MinimalFaceFeatures: View {
+    var animationEnabled = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isBlinking = false
     @State var height:CGFloat = 20;
@@ -41,9 +42,9 @@ struct MinimalFaceFeatures: View {
             }
         }
         .frame(width: self.width, height: self.height) // Maximum size of face
-        .task(id: reduceMotion) {
+        .task(id: reduceMotion || !animationEnabled) {
             isBlinking = false
-            guard !reduceMotion else { return }
+            guard !reduceMotion && animationEnabled else { return }
             do {
                 while !Task.isCancelled {
                     try await Task.sleep(for: .seconds(3))

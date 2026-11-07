@@ -379,8 +379,7 @@ struct ContentView: View {
                 Rectangle()
                     .fill(.black)
                     .frame(width: vm.closedNotchSize.width - 20)
-                MinimalFaceFeatures()
-                    .environment(\.accessibilityReduceMotion, !energyManager.allowsDecorativeAnimation)
+                MinimalFaceFeatures(animationEnabled: energyManager.allowsDecorativeAnimation)
             }
         }.frame(
             height: vm.effectiveClosedNotchHeight,
