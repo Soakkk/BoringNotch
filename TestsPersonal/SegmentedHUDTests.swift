@@ -9,6 +9,15 @@ import SwiftUI
     }
 
     @MainActor static func main() throws {
+        check(renderInlineHUDPercentage(2) == "100%", "inline percentage clamps an excessive reading")
+        check(renderInlineHUDPercentage(-1) == "0%", "inline percentage clamps a negative reading")
+        check(renderInlineHUDPercentage(0.525) == "52%", "inline percentage retains fractional input")
+        // Fail on bounded inputs first, so RED is a clean failure rather than a
+        // deliberate Swift integer-conversion trap on the following readings.
+        if failures > 0 { exit(1) }
+        check(renderInlineHUDPercentage(.nan) == "0%", "inline NaN reading does not crash")
+        check(renderInlineHUDPercentage(.infinity) == "0%", "inline infinite reading does not crash")
+        check(renderInlineHUDPercentage(CGFloat.greatestFiniteMagnitude) == "100%", "inline huge finite reading does not crash")
         check(SegmentedLevel.litCount(0) == 0, "mute leaves all twenty segments inactive")
         check(SegmentedLevel.litCount(1) == 20, "full level lights all twenty segments")
         check(SegmentedLevel.litCount(0.56) == 12, "normal level uses the approved twenty-step display")
@@ -62,6 +71,6 @@ import SwiftUI
         try png.write(to: directory.appendingPathComponent("inline-65pt.png"))
         check(image.size.width == 73, "all twenty segments fit the narrow inline meter")
         if failures > 0 { exit(1) }
-        print("Segmented HUD: 21 checks passed; 7 native fixtures in \(directory.path)")
+        print("Segmented HUD: 27 checks passed; 7 native fixtures in \(directory.path)")
     }
 }

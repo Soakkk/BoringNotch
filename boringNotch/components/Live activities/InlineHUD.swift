@@ -96,7 +96,7 @@ struct InlineHUD: View {
                                 .allowsTightening(true)
                                 .multilineTextAlignment(.trailing)
                         } else if Defaults[.showClosedNotchHUDPercentage] {
-                            Text("\(Int(value * 100))%")
+                            Text("\(Int(SegmentedLevel.normalized(value) * 100))%")
                                 .font(.caption)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.gray)
