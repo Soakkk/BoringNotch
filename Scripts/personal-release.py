@@ -42,7 +42,8 @@ def validate_app(app):
     if plist(helper / 'Contents/Info.plist')['CFBundleIdentifier'] != META['helper_id']:
         raise ValueError('Unexpected XPC helper identity')
     for bundle, executable in ((app, META['name']), (helper, 'BoringNotchXPCHelper')):
-        run('lipo', bundle / 'Contents/MacOS' / executable, '-verify_arch', 'arm64', 'x86_64')
+        for architecture in ('arm64', 'x86_64'):
+            run('lipo', bundle / 'Contents/MacOS' / executable, '-verify_arch', architecture)
     return info
 
 

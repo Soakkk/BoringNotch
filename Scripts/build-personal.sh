@@ -18,6 +18,8 @@ xcodebuild -project boringNotch.xcodeproj -scheme boringNotch \
   DEVELOPMENT_TEAM= build 2>&1 | tee "$BUILD_ROOT/xcodebuild.log"
 APP="$BUILD_ROOT/DerivedData/Build/Products/Release/BoringNotch Personal.app"
 test -d "$APP/Contents/XPCServices/BoringNotchXPCHelper.xpc"
-lipo "$APP/Contents/MacOS/BoringNotch Personal" -verify_arch arm64 x86_64
-lipo "$APP/Contents/XPCServices/BoringNotchXPCHelper.xpc/Contents/MacOS/BoringNotchXPCHelper" -verify_arch arm64 x86_64
+for architecture in arm64 x86_64; do
+  lipo "$APP/Contents/MacOS/BoringNotch Personal" -verify_arch "$architecture"
+  lipo "$APP/Contents/XPCServices/BoringNotchXPCHelper.xpc/Contents/MacOS/BoringNotchXPCHelper" -verify_arch "$architecture"
+done
 ditto -c -k --keepParent "$APP" "$BUILD_ROOT/BoringNotch-Personal-unsigned.zip"
