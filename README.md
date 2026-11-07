@@ -4,15 +4,16 @@ Variante personal de [TheBoringNotch](https://github.com/TheBoredTeam/boring.not
 
 ## Qué cambia
 
-- Panel abierto de **640×190 puntos**, con la misma ventana de640×210 incluyendo sombra.
-- Música compacta y una agenda legible de tres filas. La vista de detalle usa el mismo espacio y permite navegar por los días.
-- El reproductor y las letras detienen sus refrescos al pausar. Las animaciones decorativas cancelan sus tareas al desaparecer y respetan Reducir movimiento.
+- Panel abierto de **640×190 puntos**, con la misma ventana de 640 × 210 incluyendo sombra.
+- Distribución adaptativa: más espacio para música cuando la agenda está vacía y un reproductor más compacto al pausar. Agenda legible de tres filas. La vista de detalle usa el mismo espacio y permite navegar por los días.
+- Tres temas estáticos: Esencial, Grafito y Ámbar, seleccionables en Apariencia.
+- Ahorro inteligente según batería, bajo consumo, temperatura y reposo de pantalla. El reproductor y las letras detienen sus refrescos al pausar. Las animaciones decorativas cancelan sus tareas al desaparecer y respetan Reducir movimiento.
 - Calendarios y recordatorios a través de Calendario de macOS: incluye las cuentas de Google que tengas añadidas al sistema.
 - Aplicación independiente de FocusNotch, con identificadores y catálogo de actualizaciones propios.
 
 ## Instalación y actualizaciones
 
-macOS15 o posterior; Apple Silicon e Intel. Descarga el instalador de [Releases](https://github.com/Soakkk/BoringNotch/releases). La primera versión personal es3.0.0 (build300000). Sustituye siempre la misma copia de **BoringNotch Personal.app** en Aplicaciones.
+macOS 15 o posterior; Apple Silicon e Intel. Descarga el instalador de [Releases](https://github.com/Soakkk/BoringNotch/releases). La versión 3.1.0 (build 301000) incorpora la distribución adaptativa, los temas y el ahorro inteligente. Sustituye siempre la misma copia de **BoringNotch Personal.app** en Aplicaciones.
 
 Las comprobaciones y descargas automáticas están activadas por defecto. Se pueden cambiar en los ajustes de la app. El canal estable propio utiliza un appcast firmado y archivos de actualización firmados con Ed25519. Las actualizaciones originales se incorporan revisando el código del proyecto de origen.
 

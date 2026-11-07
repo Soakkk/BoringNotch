@@ -68,7 +68,7 @@ struct SystemEventIndicatorModifier: View {
                         .frame(width: 35, alignment: .trailing)
                 }
             } else {
-                Text("Mic \(value > 0 ? "unmuted" : "muted")")
+                Text("Mic \(value > 0 ? String(localized: "unmuted") : String(localized: "muted"))")
                     .foregroundStyle(.gray)
                     .lineLimit(1)
                     .allowsTightening(true)

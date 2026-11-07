@@ -15,11 +15,13 @@ import SwiftUIIntrospect
 
 @MainActor
 struct ContentView: View {
+    @AppStorage("personalTheme") private var personalTheme: PersonalTheme = .esencial
     @EnvironmentObject var vm: BoringViewModel
     @ObservedObject var webcamManager = WebcamManager.shared
 
     @ObservedObject var coordinator = BoringViewCoordinator.shared
     @ObservedObject var musicManager = MusicManager.shared
+    @ObservedObject private var energyManager = PersonalEnergyManager.shared
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var brightnessManager = BrightnessManager.shared
     @ObservedObject var volumeManager = VolumeManager.shared
@@ -100,7 +102,7 @@ struct ContentView: View {
                         : cornerRadiusInsets.closed.bottom
                     )
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
-                    .background(.black)
+                    .background(vm.notchState == .open ? personalTheme.surface : .black)
                     .clipShape(currentNotchShape)
                     .overlay(alignment: .top) {
                         Rectangle()
@@ -109,7 +111,7 @@ struct ContentView: View {
                             .padding(.horizontal, topCornerRadius)
                     }
                     .shadow(
-                        color: ((vm.notchState == .open || isHovering) && Defaults[.enableShadow])
+                        color: ((vm.notchState == .open || isHovering) && Defaults[.enableShadow] && energyManager.allowsDecorativeAnimation)
                             ? .black.opacity(0.7) : .clear, radius: Defaults[.cornerRadiusScaling] ? 6 : 4
                     )
                     .padding(
@@ -327,7 +329,7 @@ struct ContentView: View {
                                   HStack(alignment: .center) {
                                       Image(systemName: "music.note")
                                       GeometryReader { geo in
-                                          MarqueeText(.constant(musicManager.songTitle + " - " + musicManager.artistName),  textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6) : .gray, minDuration: 1, frameWidth: geo.size.width, isPlaying: musicManager.isPlaying)
+                                          MarqueeText(.constant(musicManager.songTitle + " - " + musicManager.artistName),  textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6) : .gray, minDuration: 1, frameWidth: geo.size.width, isPlaying: musicManager.isPlaying && energyManager.allowsDecorativeAnimation)
                                       }
                                   }
                                   .foregroundStyle(.gray)
@@ -377,7 +379,7 @@ struct ContentView: View {
                 Rectangle()
                     .fill(.black)
                     .frame(width: vm.closedNotchSize.width - 20)
-                MinimalFaceFeatures()
+                MinimalFaceFeatures(animationEnabled: energyManager.allowsDecorativeAnimation)
             }
         }.frame(
             height: vm.effectiveClosedNotchHeight,
@@ -413,7 +415,7 @@ struct ContentView: View {
                                 textColor: Defaults[.coloredSpectrogram]
                                     ? Color(nsColor: musicManager.avgColor) : Color.gray,
                                 minDuration: 0.4,
-                                frameWidth: 100, isPlaying: musicManager.isPlaying
+                                frameWidth: 100, isPlaying: musicManager.isPlaying && energyManager.allowsDecorativeAnimation
                             )
                             .opacity(
                                 (coordinator.expandingView.show
@@ -449,7 +451,7 @@ struct ContentView: View {
                 )
 
             HStack {
-                if useMusicVisualizer {
+                if useMusicVisualizer || !energyManager.allowsDecorativeAnimation || !musicManager.isPlaying {
                     Rectangle()
                         .fill(
                             Defaults[.coloredSpectrogram]
@@ -459,7 +461,7 @@ struct ContentView: View {
                         .frame(width: 50, alignment: .center)
                         .matchedGeometryEffect(id: "spectrum", in: albumArtNamespace)
                         .mask {
-                            AudioSpectrumView(isPlaying: $musicManager.isPlaying)
+                            AudioSpectrumView(isPlaying: .constant(musicManager.isPlaying && energyManager.allowsDecorativeAnimation))
                                 .frame(width: 16, height: 12)
                         }
                 } else {

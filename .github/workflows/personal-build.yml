@@ -119,7 +119,7 @@ jobs:
           VERSION="$(python3 -c 'import json; print(json.load(open("release-assets/release-manifest.json"))["version"])')"
           gh release create "personal-v${VERSION}" --target "$SOURCE_SHA" \
             --title "BoringNotch Personal ${VERSION}" \
-            --notes 'Personal ad-hoc universal build. GPL source and licenses included. Review Release/README.md for signing and installation requirements.' \
+            --notes 'Versión personal universal con firma local. Código fuente GPL y licencias incluidos. Consulta Release/README.md para los detalles de instalación y firma.' \
             release-assets/*
       - name: Publish signed appcast last
         run: |
