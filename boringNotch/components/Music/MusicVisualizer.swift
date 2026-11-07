@@ -11,7 +11,9 @@ import SwiftUI
 class AudioSpectrum: NSView {
     private var barLayers: [CAShapeLayer] = []
     private var barScales: [CGFloat] = []
-    private var isPlaying: Bool = true
+    private var isPlaying = false
+    private var reduceMotion = false
+    private var windowObservation: NSKeyValueObservation?
     private var animationTimer: Timer?
     
     override init(frame frameRect: NSRect) {
@@ -24,6 +26,38 @@ class AudioSpectrum: NSView {
         super.init(coder: coder)
         wantsLayer = true
         setupBars()
+    }
+
+    deinit {
+        animationTimer?.invalidate()
+        windowObservation?.invalidate()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        windowObservation?.invalidate()
+        windowObservation = window?.observe(\.isVisible, options: [.new]) { [weak self] _, _ in
+            self?.updateAnimationState()
+        }
+        updateAnimationState()
+    }
+
+    override func viewDidHide() {
+        super.viewDidHide()
+        updateAnimationState()
+    }
+
+    override func viewDidUnhide() {
+        super.viewDidUnhide()
+        updateAnimationState()
+    }
+
+    private func updateAnimationState() {
+        if isPlaying && !reduceMotion && window?.isVisible == true && !isHiddenOrHasHiddenAncestor {
+            startAnimating()
+        } else {
+            stopAnimating()
+        }
     }
 
     private func setupBars() {
@@ -87,34 +121,45 @@ class AudioSpectrum: NSView {
     }
     
     private func resetBars() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         for (i, barLayer) in barLayers.enumerated() {
             barLayer.removeAllAnimations()
             barLayer.transform = CATransform3DMakeScale(1, 0.35, 1)
             barScales[i] = 0.35
         }
+        CATransaction.commit()
     }
     
     func setPlaying(_ playing: Bool) {
         isPlaying = playing
-        if isPlaying {
-            startAnimating()
-        } else {
-            stopAnimating()
-        }
+        updateAnimationState()
+    }
+
+    func setReduceMotion(_ enabled: Bool) {
+        reduceMotion = enabled
+        updateAnimationState()
     }
 }
 
 struct AudioSpectrumView: NSViewRepresentable {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var isPlaying: Bool
     
     func makeNSView(context: Context) -> AudioSpectrum {
         let spectrum = AudioSpectrum()
+        spectrum.setReduceMotion(reduceMotion)
         spectrum.setPlaying(isPlaying)
         return spectrum
     }
     
     func updateNSView(_ nsView: AudioSpectrum, context: Context) {
+        nsView.setReduceMotion(reduceMotion)
         nsView.setPlaying(isPlaying)
+    }
+
+    static func dismantleNSView(_ nsView: AudioSpectrum, coordinator: ()) {
+        nsView.setPlaying(false)
     }
 }
 
