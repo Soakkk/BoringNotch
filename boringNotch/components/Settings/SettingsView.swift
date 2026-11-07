@@ -159,7 +159,7 @@ struct GeneralSettings: View {
                     Text("Show menu bar icon")
                 }
                 .tint(.effectiveAccent)
-                LaunchAtLogin.Toggle("Launch at login")
+                LaunchAtLogin.Toggle("Abrir al iniciar sesión")
                 Defaults.Toggle(key: .showOnAllDisplays) {
                     Text("Show on all displays")
                 }
@@ -1225,7 +1225,7 @@ struct Appearance: View {
                     Text("Colored spectrogram")
                 }
                 Defaults
-                    .Toggle("Player tinting", key: .playerColorTinting)
+                    .Toggle("Colorear el reproductor", key: .playerColorTinting)
                 Defaults.Toggle(key: .lightingEffect) {
                     Text("Enable blur effect behind album art")
                 }
