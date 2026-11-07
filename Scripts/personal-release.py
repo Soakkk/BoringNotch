@@ -147,7 +147,7 @@ def main():
         ET.SubElement(item, f'{{{SPARKLE}}}shortVersionString').text = META['version']
         ET.SubElement(item, f'{{{SPARKLE}}}minimumSystemVersion').text = '15.0.0'
         ET.SubElement(item, 'pubDate').text = datetime.datetime.now(datetime.timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')
-        ET.SubElement(item, 'description').text = 'Agenda y música adaptativas, tres temas y ahorro inteligente. Versión personal con firma local; código fuente y licencia GPL incluidos.'
+        ET.SubElement(item, 'description').text = 'Nueva distribución musical lateral: portada, canción y controles agrupados, con progreso a todo el ancho. Versión personal con firma local; código fuente y licencia GPL incluidos.'
         ET.SubElement(item, 'enclosure', {
             'url': f"https://github.com/{META['repository']}/releases/download/personal-v{META['version']}/{archive.name}",
             f'{{{SPARKLE}}}edSignature': signature, 'length': str(archive.stat().st_size),

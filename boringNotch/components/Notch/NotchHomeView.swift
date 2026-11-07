@@ -102,8 +102,8 @@ struct MusicControlsView: View {
     @ObservedObject private var energy = PersonalEnergyManager.shared
     @Environment(\.personalTheme) private var theme
     @ObservedObject var musicManager = MusicManager.shared
-        @EnvironmentObject var vm: BoringViewModel
-        @ObservedObject var webcamManager = WebcamManager.shared
+    @EnvironmentObject var vm: BoringViewModel
+    @ObservedObject var webcamManager = WebcamManager.shared
     @State private var sliderValue: Double = 0
     @State private var dragging: Bool = false
     @State private var lastDragged: Date = .distantPast
@@ -111,39 +111,48 @@ struct MusicControlsView: View {
     @Default(.musicControlSlotLimit) private var slotLimit
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 10) {
-                if let namespace = albumArtNamespace {
-                    AlbumArtView(vm: vm, albumArtNamespace: namespace)
-                        .frame(width: artworkSize, height: artworkSize)
-                        .accessibilityLabel("Abrir aplicación de música")
+        Group {
+            if let namespace = albumArtNamespace {
+                PersonalMusicLayout(
+                    artworkSize: artworkSize, controlsWidth: personalControlsWidth,
+                    artwork: AlbumArtView(vm: vm, albumArtNamespace: namespace).accessibilityLabel("Abrir aplicación de música"),
+                    metadata: { width in songInfo(width: width) },
+                    controls: slotToolbar, progress: musicSlider
+                )
+            } else {
+                // The camera's original side-by-side player keeps its existing sizing.
+                VStack(alignment: .leading, spacing: 4) {
+                    GeometryReader { geo in
+                        songInfo(width: geo.size.width).frame(maxHeight: .infinity, alignment: .center)
+                    }.frame(height: artworkSize)
+                    musicSlider
+                    slotToolbar
                 }
-                GeometryReader { geo in
-                    songInfo(width: geo.size.width)
-                        .frame(maxHeight: .infinity, alignment: .center)
-                }
-            }.frame(height: artworkSize)
-            musicSlider
-            slotToolbar
+            }
         }
         .buttonStyle(PlainButtonStyle())
         .tint(theme.accent)
     }
 
     private func songInfo(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            MarqueeText(
-                Binding(get: { !musicManager.songTitle.isEmpty ? musicManager.songTitle : "Tu música" }, set: { _ in }), font: .headline, nsFont: .headline, textColor: .white,
-                frameWidth: width, isPlaying: musicManager.isPlaying && energy.allowsDecorativeAnimation)
-            MarqueeText(
-                Binding(get: { !musicManager.artistName.isEmpty ? musicManager.artistName : "Elige algo para escuchar" }, set: { _ in }),
-                font: .subheadline,
-                nsFont: .subheadline,
-                textColor: theme.secondary,
-                frameWidth: width, isPlaying: musicManager.isPlaying && energy.allowsDecorativeAnimation
-            )
-            .fontWeight(.medium)
-            .help(musicManager.songTitle + " · " + musicManager.artistName)
+        VStack(alignment: .leading, spacing: albumArtNamespace == nil ? 0 : 3) {
+            if albumArtNamespace != nil {
+                PersonalSongMetadata(title: musicManager.songTitle, artist: musicManager.artistName,
+                                     titleLines: Defaults[.enableLyrics] ? 1 : 2)
+            } else {
+                MarqueeText(
+                    Binding(get: { !musicManager.songTitle.isEmpty ? musicManager.songTitle : "Tu música" }, set: { _ in }), font: .headline, nsFont: .headline, textColor: .white,
+                    frameWidth: width, isPlaying: musicManager.isPlaying && energy.allowsDecorativeAnimation)
+                MarqueeText(
+                    Binding(get: { !musicManager.artistName.isEmpty ? musicManager.artistName : "Elige algo para escuchar" }, set: { _ in }),
+                    font: .subheadline,
+                    nsFont: .subheadline,
+                    textColor: theme.secondary,
+                    frameWidth: width, isPlaying: musicManager.isPlaying && energy.allowsDecorativeAnimation
+                )
+                .fontWeight(.medium)
+                .help(musicManager.songTitle + " · " + musicManager.artistName)
+            }
             if Defaults[.enableLyrics] {
                 TimelineView(.animation(minimumInterval: energy.progressInterval, paused: !musicManager.isPlaying || !energy.screenIsAwake)) { timeline in
                     let currentElapsed: Double = {
@@ -201,14 +210,21 @@ struct MusicControlsView: View {
     }
 
     private var slotToolbar: some View {
-        let slots = activeSlots
+        let slots = albumArtNamespace == nil ? activeSlots : activeSlots.filter { $0 != .none }
         return HStack(spacing: 6) {
             ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
                 slotView(for: slot)
                     .frame(alignment: .center)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, alignment: albumArtNamespace == nil ? .center : .leading)
+        .frame(height: albumArtNamespace == nil ? nil : 28)
+    }
+
+    private var personalControlsWidth: CGFloat {
+        let slots = activeSlots.filter { $0 != .none }
+        // Reserve the open volume slider too, so opening it never overflows the column.
+        return CGFloat(slots.count * 28 + max(0, slots.count - 1) * 6 + slots.filter { $0 == .volume }.count * 48)
     }
 
     private var activeSlots: [MusicControlButton] {
@@ -231,35 +247,35 @@ struct MusicControlsView: View {
     private func slotView(for slot: MusicControlButton) -> some View {
         switch slot {
         case .shuffle:
-            HoverButton(icon: "shuffle", iconColor: musicManager.isShuffled ? .red : .primary, scale: .medium) {
+            HoverButton(icon: "shuffle", iconColor: musicManager.isShuffled ? .red : .primary, scale: .medium, compact: albumArtNamespace != nil) {
                 MusicManager.shared.toggleShuffle()
             }
         case .previous:
-            HoverButton(icon: "backward.fill", scale: .medium) {
+            HoverButton(icon: "backward.fill", scale: .medium, compact: albumArtNamespace != nil) {
                 MusicManager.shared.previousTrack()
             }
         case .playPause:
-            HoverButton(icon: musicManager.isPlaying ? "pause.fill" : "play.fill", scale: .large) {
+            HoverButton(icon: musicManager.isPlaying ? "pause.fill" : "play.fill", scale: .large, compact: albumArtNamespace != nil) {
                 MusicManager.shared.togglePlay()
             }
         case .next:
-            HoverButton(icon: "forward.fill", scale: .medium) {
+            HoverButton(icon: "forward.fill", scale: .medium, compact: albumArtNamespace != nil) {
                 MusicManager.shared.nextTrack()
             }
         case .repeatMode:
-            HoverButton(icon: repeatIcon, iconColor: repeatIconColor, scale: .medium) {
+            HoverButton(icon: repeatIcon, iconColor: repeatIconColor, scale: .medium, compact: albumArtNamespace != nil) {
                 MusicManager.shared.toggleRepeat()
             }
         case .volume:
             VolumeControlView()
         case .favorite:
-            FavoriteControlButton()
+            FavoriteControlButton(compact: albumArtNamespace != nil)
         case .goBackward:
-            HoverButton(icon: "gobackward.15", scale: .medium) {
+            HoverButton(icon: "gobackward.15", scale: .medium, compact: albumArtNamespace != nil) {
                 MusicManager.shared.skip(seconds: -15)
             }
         case .goForward:
-            HoverButton(icon: "goforward.15", scale: .medium) {
+            HoverButton(icon: "goforward.15", scale: .medium, compact: albumArtNamespace != nil) {
                 MusicManager.shared.skip(seconds: 15)
             }
         case .none:
@@ -289,10 +305,11 @@ struct MusicControlsView: View {
 }
 
 struct FavoriteControlButton: View {
+    var compact: Bool = false
     @ObservedObject var musicManager = MusicManager.shared
 
     var body: some View {
-        HoverButton(icon: iconName, iconColor: iconColor, scale: .medium) {
+        HoverButton(icon: iconName, iconColor: iconColor, scale: .medium, compact: compact) {
             MusicManager.shared.toggleFavoriteTrack()
         }
         .disabled(!musicManager.canFavoriteTrack)
@@ -443,7 +460,7 @@ struct NotchHomeView: View {
 
     @ViewBuilder private var personalContent: some View {
         if shouldShowCamera { mainContent }
-        else if !showCalendar { MusicControlsView(albumArtNamespace: albumArtNamespace, artworkSize: 60).frame(height: 128) }
+        else if !showCalendar { MusicControlsView(albumArtNamespace: albumArtNamespace, artworkSize: 84).frame(height: 128) }
         else {
             HStack(spacing: 16) {
                 if !agendaDetail {

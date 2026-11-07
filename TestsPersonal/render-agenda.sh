@@ -9,5 +9,5 @@ import sys
 source=Path('boringNotch/components/Notch/NotchHomeView.swift').read_text().split('// MARK: - Personal agenda surface',1)[1]
 Path(sys.argv[1]).write_text('import SwiftUI\n'+source)
 PY
-swiftc -parse-as-library -swift-version 5 -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk boringNotch/components/Notch/PersonalAppearance.swift "$probe/Surface.swift" TestsPersonal/AgendaRenderTests.swift -o "$probe/check"
+swiftc -parse-as-library -swift-version 5 -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk boringNotch/components/Notch/PersonalAppearance.swift boringNotch/components/HoverButton.swift "$probe/Surface.swift" TestsPersonal/AgendaRenderTests.swift -o "$probe/check"
 "$probe/check" "${1:-/tmp/boring-personal-agenda-renders}"
