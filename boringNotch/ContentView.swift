@@ -327,7 +327,7 @@ struct ContentView: View {
                                   HStack(alignment: .center) {
                                       Image(systemName: "music.note")
                                       GeometryReader { geo in
-                                          MarqueeText(.constant(musicManager.songTitle + " - " + musicManager.artistName),  textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6) : .gray, minDuration: 1, frameWidth: geo.size.width)
+                                          MarqueeText(.constant(musicManager.songTitle + " - " + musicManager.artistName),  textColor: Defaults[.playerColorTinting] ? Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.6) : .gray, minDuration: 1, frameWidth: geo.size.width, isPlaying: musicManager.isPlaying)
                                       }
                                   }
                                   .foregroundStyle(.gray)
@@ -413,7 +413,7 @@ struct ContentView: View {
                                 textColor: Defaults[.coloredSpectrogram]
                                     ? Color(nsColor: musicManager.avgColor) : Color.gray,
                                 minDuration: 0.4,
-                                frameWidth: 100
+                                frameWidth: 100, isPlaying: musicManager.isPlaying
                             )
                             .opacity(
                                 (coordinator.expandingView.show

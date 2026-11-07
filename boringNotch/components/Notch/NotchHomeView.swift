@@ -142,7 +142,7 @@ struct MusicControlsView: View {
         VStack(alignment: .leading, spacing: 0) {
             MarqueeText(
                 $musicManager.songTitle, font: .headline, nsFont: .headline, textColor: .white,
-                frameWidth: width)
+                frameWidth: width, isPlaying: musicManager.isPlaying)
             MarqueeText(
                 $musicManager.artistName,
                 font: .headline,
@@ -150,11 +150,11 @@ struct MusicControlsView: View {
                 textColor: Defaults[.playerColorTinting]
                     ? Color(nsColor: musicManager.avgColor)
                         .ensureMinimumBrightness(factor: 0.6) : .gray,
-                frameWidth: width
+                frameWidth: width, isPlaying: musicManager.isPlaying
             )
             .fontWeight(.medium)
             if Defaults[.enableLyrics] {
-                TimelineView(.animation(minimumInterval: 0.25)) { timeline in
+                TimelineView(.animation(minimumInterval: 0.25, paused: !musicManager.isPlaying)) { timeline in
                     let currentElapsed: Double = {
                         guard musicManager.isPlaying else { return musicManager.elapsedTime }
                         let delta = timeline.date.timeIntervalSince(musicManager.timestampDate)
@@ -178,7 +178,7 @@ struct MusicControlsView: View {
                         font: .subheadline,
                         nsFont: .subheadline,
                         textColor: musicManager.isFetchingLyrics ? .gray.opacity(0.7) : .gray,
-                        frameWidth: width
+                        frameWidth: width, isPlaying: musicManager.isPlaying
                     )
                     .font(isPersian ? .custom("Vazirmatn-Regular", size: NSFont.preferredFont(forTextStyle: .subheadline).pointSize) : .subheadline)
                     .lineLimit(1)
@@ -190,7 +190,7 @@ struct MusicControlsView: View {
     }
 
     private var musicSlider: some View {
-        TimelineView(.animation(minimumInterval: musicManager.playbackRate > 0 ? 0.1 : nil)) { timeline in
+        TimelineView(.animation(minimumInterval: 0.25, paused: !musicManager.isPlaying || musicManager.playbackRate <= 0)) { timeline in
             MusicSliderView(
                 sliderValue: $sliderValue,
                 duration: $musicManager.songDuration,
@@ -424,15 +424,76 @@ struct NotchHomeView: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = BoringViewCoordinator.shared
     let albumArtNamespace: Namespace.ID
+    @ObservedObject private var calendarManager = CalendarManager.shared
+    @State private var agendaDetail = false
+    @State private var selectedDate = CalendarManager.shared.currentWeekStartDate
 
     var body: some View {
         Group {
             if !coordinator.firstLaunch {
-                mainContent
+                personalContent
             }
         }
         // simplified: use a straightforward opacity transition
         .transition(.opacity)
+    }
+
+    @ViewBuilder private var personalContent: some View {
+        if shouldShowCamera { mainContent }
+        else if !Defaults[.showCalendar] { MusicPlayerView(albumArtNamespace: albumArtNamespace).frame(height: 128) }
+        else {
+            HStack(spacing: 16) {
+                if !agendaDetail {
+                    HStack(spacing: 12) {
+                        AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
+                            .frame(width: 72, height: 72)
+                            .accessibilityLabel("Abrir aplicación de música")
+                        MusicControlsView().frame(maxWidth: .infinity)
+                    }.frame(width: 264, height: 120)
+                    Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 116)
+                }
+                PersonalAgendaSurface(
+                    heading: agendaHeading, items: agendaItems,
+                    detailed: agendaDetail, loading: calendarManager.isLoading,
+                    denied: calendarManager.calendarAuthorizationStatus != .fullAccess && calendarManager.calendarAuthorizationStatus != .writeOnly,
+                    onBack: { agendaDetail = false }, onDetail: { agendaDetail = true },
+                    onPrevious: { changeDay(-1) }, onNext: { changeDay(1) },
+                    onToday: { selectedDate = Calendar.current.startOfDay(for: Date()) },
+                    onOpen: { id in
+                        guard let event = calendarManager.events.first(where: { $0.id == id }) else { return }
+                        if !agendaDetail { agendaDetail = true }
+                        else if let url = event.calendarAppURL() { NSWorkspace.shared.open(url) }
+                    },
+                    onReminder: { id, completed in Task { await calendarManager.setReminderCompleted(reminderID: id, completed: completed) } },
+                    onSettings: { SettingsWindowController.shared.showWindow() }
+                )
+                .onHover { vm.isHoveringCalendar = $0 }
+            }
+            .frame(height: 128)
+            .task(id: selectedDate) { await calendarManager.updateCurrentDate(selectedDate) }
+        }
+    }
+
+    private var agendaHeading: String {
+        let prefix = Calendar.current.isDateInToday(selectedDate) ? "Hoy · " : ""
+        return prefix + selectedDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)).capitalized
+    }
+    private var agendaItems: [PersonalAgendaItem] {
+        let events = EventListView.filteredEvents(events: calendarManager.events).sorted { $0.start < $1.start }
+        let candidates = !agendaDetail && Calendar.current.isDateInToday(selectedDate)
+            ? events.filter { $0.isAllDay || $0.end > Date() || $0.type.isReminder } : events
+        return candidates.map { event in
+            let time = event.isAllDay ? "Todo el día" : event.start.formatted(date: .omitted, time: .shortened)
+            let end = event.isAllDay ? "" : event.end.formatted(date: .omitted, time: .shortened)
+            let duration = max(0, Int(event.end.timeIntervalSince(event.start) / 60))
+            let subtitle = event.isAllDay ? event.calendar.title : "\(event.calendar.title) · \(duration) min"
+            let completed: Bool? = { if case .reminder(let done) = event.type { return done }; return nil }()
+            return PersonalAgendaItem(id: event.id, time: time, endTime: end, title: event.title,
+                subtitle: subtitle, color: Color(nsColor: event.calendar.color), completed: completed)
+        }
+    }
+    private func changeDay(_ offset: Int) {
+        if let day = Calendar.current.date(byAdding: .day, value: offset, to: selectedDate) { selectedDate = day }
     }
 
     private var shouldShowCamera: Bool {
@@ -506,10 +567,16 @@ struct MusicSliderView: View {
             )
             .font(.caption)
         }
-        .onChange(of: currentDate) {
-           guard !dragging, timestampDate.timeIntervalSince(lastDragged) > -1 else { return }
-            sliderValue = MusicManager.shared.estimatedPlaybackPosition(at: currentDate)
-        }
+        .onAppear { updatePosition() }
+        .onChange(of: currentDate) { updatePosition() }
+        .onChange(of: elapsedTime) { updatePosition() }
+        .onChange(of: duration) { updatePosition() }
+        .onChange(of: isPlaying) { updatePosition() }
+    }
+
+    private func updatePosition() {
+        guard !dragging, timestampDate.timeIntervalSince(lastDragged) > -1 else { return }
+        sliderValue = MusicManager.shared.estimatedPlaybackPosition(at: currentDate)
     }
 
     func timeString(from seconds: Double) -> String {
@@ -574,5 +641,101 @@ struct CustomSlider: View {
             )
             .animation(.spring(response: 0.35, dampingFraction: 0.7), value: dragging)
         }
+    }
+}
+
+// MARK: - Personal agenda surface
+// Pure value-driven view, also rendered by the isolated native fixture harness.
+struct PersonalAgendaItem: Identifiable {
+    let id: String
+    let time: String
+    let endTime: String
+    let title: String
+    let subtitle: String
+    let color: Color
+    var completed: Bool? = nil
+}
+
+struct PersonalAgendaSurface: View {
+    let heading: String
+    let items: [PersonalAgendaItem]
+    let detailed: Bool
+    let loading: Bool
+    let denied: Bool
+    let onBack: () -> Void
+    let onDetail: () -> Void
+    let onPrevious: () -> Void
+    let onNext: () -> Void
+    let onToday: () -> Void
+    let onOpen: (String) -> Void
+    let onReminder: (String, Bool) -> Void
+    let onSettings: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 7) {
+                if detailed { icon("chevron.left", "Volver a música", action: onBack) }
+                Button(action: onDetail) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar").font(.system(size: 12))
+                        Text(heading).font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                    }.contentShape(Rectangle())
+                }.buttonStyle(.plain).help("Ver la agenda completa sin ampliar el notch")
+                Spacer(minLength: 0)
+                icon("chevron.left", "Día anterior", action: onPrevious)
+                icon("circle.fill", "Volver a hoy", action: onToday)
+                icon("chevron.right", "Día siguiente", action: onNext)
+            }.frame(height: 22)
+            if denied {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Permite el acceso al calendario").font(.system(size: 12, weight: .medium))
+                    Button("Abrir ajustes", action: onSettings).buttonStyle(.plain).foregroundStyle(.mint)
+                }.frame(maxHeight: .infinity, alignment: .center)
+            } else if loading {
+                HStack(spacing: 8) { ProgressView().controlSize(.small); Text("Cargando agenda…").font(.system(size: 12)) }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            } else if items.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Sin eventos pendientes").font(.system(size: 13, weight: .semibold))
+                    Text("Consulta otro día con las flechas").font(.system(size: 11)).foregroundStyle(.white.opacity(0.65))
+                    if !detailed { Button("Ver el día completo", action: onDetail).buttonStyle(.plain).foregroundStyle(.mint).font(.system(size: 11)) }
+                }.frame(maxHeight: .infinity, alignment: .center)
+            } else {
+                ScrollView(.vertical, showsIndicators: detailed) {
+                    LazyVStack(alignment: .leading, spacing: detailed ? 5 : 3) {
+                        ForEach(detailed ? items : Array(items.prefix(3))) { item in
+                            HStack(alignment: .center, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.time)
+                                    if detailed && !item.endTime.isEmpty { Text(item.endTime).foregroundStyle(.white.opacity(0.6)) }
+                                }.font(.system(size: detailed ? 12 : 11, weight: .medium)).monospacedDigit()
+                                    .frame(width: detailed ? 52 : 46, alignment: .leading)
+                                if let completed = item.completed {
+                                    Button { onReminder(item.id, !completed) } label: {
+                                        Image(systemName: completed ? "checkmark.circle.fill" : "circle")
+                                            .foregroundStyle(item.color).frame(width: 16, height: 26)
+                                    }.buttonStyle(.plain).accessibilityLabel(completed ? "Marcar recordatorio pendiente" : "Completar recordatorio")
+                                } else { RoundedRectangle(cornerRadius: 1.5).fill(item.color).frame(width: 3, height: 24) }
+                                Button { onOpen(item.id) } label: {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.title).font(.system(size: detailed ? 13 : 12, weight: .semibold))
+                                            .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+                                        if detailed || item.title.count < 30 {
+                                            Text(item.subtitle).font(.system(size: 10)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                                        }
+                                    }.frame(maxWidth: .infinity, minHeight: detailed ? 39 : 30, alignment: .leading)
+                                        .contentShape(Rectangle())
+                                }.buttonStyle(.plain).help(item.title)
+                            }.accessibilityElement(children: .contain)
+                            if detailed { Rectangle().fill(.white.opacity(0.1)).frame(height: 0.5) }
+                        }
+                    }
+                }
+            }
+        }.foregroundStyle(.white).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+    private func icon(_ name: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Image(systemName: name).font(.system(size: name == "circle.fill" ? 5 : 11, weight: .semibold)).frame(width: 20, height: 22).contentShape(Rectangle()) }
+            .buttonStyle(.plain).accessibilityLabel(label).help(label)
     }
 }
