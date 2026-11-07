@@ -34,11 +34,11 @@
 
 **Interfaces:** `sign_app(app, library_exception)` signs using environment `BORINGNOTCH_CODESIGN_P12_BASE64` and `BORINGNOTCH_CODESIGN_PASSWORD`, validates the identity against the committed public certificate and returns certificate fingerprint metadata. A temporary keychain exists only inside its context.
 
-- [ ] Write a native regression that builds two different fixture apps/helpers, invokes the current release signer and checks mutual designated-requirement compatibility; observe failure with ad-hoc signing.
-- [ ] Add cases rejecting missing credentials, an unrelated private identity and ad-hoc or wrong-certificate replacements; preserve sandbox/runtime and helper requirements.
-- [ ] Implement the certificate-pinned signer, temporary keychain lifecycle and safe failure reporting. Run native tests to green.
-- [ ] Create the persistent app-specific code-signing certificate once, protect its local PKCS#12/password backup, commit only its public certificate and pin, and store the two private values as repository secrets through standard encrypted GitHub handling.
-- [ ] Commit the tested signing implementation.
+- [x] Write a native regression that builds two different fixture apps/helpers, invokes the current release signer and checks mutual designated-requirement compatibility; observe failure with ad-hoc signing.
+- [x] Add cases rejecting missing credentials, an unrelated private identity and ad-hoc or wrong-certificate replacements; preserve sandbox/runtime and helper requirements.
+- [x] Implement the certificate-pinned signer, temporary keychain lifecycle and safe failure reporting. Run native tests to green.
+- [x] Create the persistent app-specific code-signing certificate once, protect its local PKCS#12/password backup, commit only its public certificate and pin, and store the two private values as repository secrets through standard encrypted GitHub handling.
+- [x] Commit the tested signing implementation.
 
 ### Task 2: Release enforcement and CI
 
@@ -46,11 +46,11 @@
 
 **Interfaces:** Manifest `signing=personal-certificate`, `codesign_certificate_sha256` equals the committed metadata pin, `notarized=false`; same five-file artifact allowlist. CI injects both certificate secrets only into the explicitly requested signing step.
 
-- [ ] Observe publication regressions for ad-hoc, unknown/missing signing and a mismatched fingerprint, then enforce pinned certificate signing before publication.
-- [ ] Connect CI secret import and native signing tests, retaining source SHA checks, signed artifact allowlist and publication ordering.
-- [ ] Prepare 3.1.3 migration commit, then 3.1.4 final commit; run release/signature and native regression checks.
-- [ ] Obtain one independent whole-branch review. Address any important finding with a failing regression first.
-- [ ] Build and verify both reviewed candidates: source, certificate, mutual requirements, app/helper architectures, entitlements, archive/feed signatures and hashes.
+- [x] Observe publication regressions for ad-hoc, unknown/missing signing and a mismatched fingerprint, then enforce pinned certificate signing before publication.
+- [x] Connect CI secret import and native signing tests, retaining source SHA checks, signed artifact allowlist and publication ordering.
+- [x] Prepare 3.1.3 migration commit, then 3.1.4 final commit; run release/signature and native regression checks.
+- [x] Obtain one independent whole-branch review. Address any important finding with a failing regression first.
+- [x] Build and verify both reviewed candidates: source, certificate, mutual requirements, app/helper architectures, entitlements, archive/feed signatures and hashes.
 
 ### Task 3: Permission migration, real update and publication
 
@@ -62,3 +62,15 @@
 - [ ] Merge reviewed source; publish the final five verified assets, verify public downloads, then activate the exact signed feed bytes last.
 - [ ] Use the first candidate's normal updater to install 3.1.4. Confirm the same path, expected version, identical signing identity and retained permissions without reauthorizing.
 - [ ] Verify normal panel, automatic checks/downloads and no regression in settled resource use. Record exact evidence and any limits; finish with a clean synchronized repository.
+
+## Execution evidence and current handoff
+
+- Six native signing tests and ten publication-policy tests passed locally and in GitHub. Existing segmented-HUD and release-signature checks passed. Independent review found no blocking defect.
+- Hosted signing exposed a documented `codesign` requirement: the temporary identity keychain must be registered in the search list even when explicitly selected. The regression was observed failing and then passing; the exact previous list is restored on success and native signing failure. No trust settings changed.
+- Migration source: `0d190eb6147940c712a1d2a566a39a85bf4bf68a`, run `42398919379`, version 3.1.3/build 301003.
+- Final source: `4fa58a90decc68650f41dde04f31b099571cb78c`, run `42398928503`, version 3.1.4/build 301004.
+- Both downloaded artifact archives match GitHub digests. All five release assets, hashes, Sparkle feed/archive signatures, actual app/helper certificate pins, mutual designated requirements, universal architectures and existing entitlements verified. Final publication guard passed.
+- 3.1.2 backed up; 3.1.3 installed and launched at the existing Applications path. Accessibility renewed through native settings and custom indicators restored. Calendar/reminder entries for this app alone renewed, with native user acceptance pending. Existing appearance, energy and automatic-update preferences preserved.
+- PR #5 merged; the verified final release is uploaded as a **draft**. The live feed still points to 3.1.2. This staging proceeds independently while awaiting native user interaction; it does not trigger an update.
+- Remaining acceptance: grant calendar/reminders once in 3.1.3, publish verified 3.1.4 assets and exact signed feed last, install via normal Sparkle update, verify all three grants persist without any further renewal, and record settled resource use.
+- Minor deferred test coverage: a direct native-import-failure cleanup assertion. Native signing-failure cleanup is now automated and passing; wrong-password failure and missing/mismatched identities are covered.
