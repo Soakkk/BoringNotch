@@ -7,7 +7,17 @@ on:
         required: true
         type: string
       publish:
-        description: Publish a reviewed release and signed feed (not implemented yet)
+        description: Publish reviewed main commit; installer first, signed feed last
+        required: true
+        default: false
+        type: boolean
+      sign_release:
+        description: Produce signed ZIP, DMG and appcast (requires personal signing secret)
+        required: true
+        default: false
+        type: boolean
+      adhoc_library_exception:
+        description: Reviewed app-only library-validation exception (see Release/README.md)
         required: true
         default: false
         type: boolean
@@ -27,18 +37,48 @@ jobs:
           PUBLISH: ${{ inputs.publish }}
         run: |
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$PUBLISH" == false ]]
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
       - name: Build unsigned universal app and helper
         run: bash Scripts/build-personal.sh
+      - name: Sign and package personal release
+        if: inputs.sign_release || inputs.publish
+        env:
+          BORINGNOTCH_SPARKLE_PRIVATE_KEY: ${{ secrets.BORINGNOTCH_SPARKLE_PRIVATE_KEY }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          LIBRARY_EXCEPTION: ${{ inputs.adhoc_library_exception }}
+        run: |
+          set -euo pipefail
+          SIGN_UPDATE="$(find build/personal/packages/artifacts/sparkle -type f -name sign_update -perm +111 -print -quit)"
+          test -n "$SIGN_UPDATE"
+          FLAGS=()
+          if [[ "$LIBRARY_EXCEPTION" == true ]]; then
+            FLAGS+=(--allow-adhoc-library-validation-exception)
+          fi
+          python3 Scripts/personal-release.py \
+            --app 'build/personal/DerivedData/Build/Products/Release/BoringNotch Personal.app' \
+            --sign-update "$SIGN_UPDATE" --output build/personal/release \
+            --source-sha "$SOURCE_SHA" "${FLAGS[@]}"
       - name: Upload packaged preview
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: personal-unsigned-${{ inputs.source_sha }}
           path: build/personal/BoringNotch-Personal-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload signed release allowlist
+        if: inputs.sign_release || inputs.publish
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: personal-release-${{ inputs.source_sha }}
+          path: |
+            build/personal/release/BoringNotch-Personal-*.zip
+            build/personal/release/BoringNotch-Personal-*.dmg
+            build/personal/release/personal-appcast.xml
+            build/personal/release/release-manifest.json
+            build/personal/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
       - name: Upload build diagnostics
@@ -49,3 +89,45 @@ jobs:
           path: build/personal/xcodebuild.log
           if-no-files-found: ignore
           retention-days: 7
+  publish:
+    if: inputs.publish
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: personal-release-${{ inputs.source_sha }}
+          path: release-assets
+      - name: Validate reviewed source and strictly increasing build
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$SOURCE_SHA" HEAD
+          python3 Scripts/check-personal-publication.py release-assets
+      - name: Publish installer and update archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          VERSION="$(python3 -c 'import json; print(json.load(open("release-assets/release-manifest.json"))["version"])')"
+          gh release create "personal-v${VERSION}" --target "$SOURCE_SHA" \
+            --title "BoringNotch Personal ${VERSION}" \
+            --notes 'Personal ad-hoc universal build. GPL source and licenses included. Review Release/README.md for signing and installation requirements.' \
+            release-assets/*
+      - name: Publish signed appcast last
+        run: |
+          set -euo pipefail
+          cp release-assets/personal-appcast.xml updater/personal-appcast.xml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add updater/personal-appcast.xml
+          git commit -m 'Publish signed personal appcast'
+          git push origin HEAD:main

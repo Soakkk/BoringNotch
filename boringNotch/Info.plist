@@ -14,7 +14,11 @@
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/Soakkk/BoringNotch/main/updater/personal-appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>PERSONAL_SPARKLE_PUBLIC_KEY_REPLACE_BEFORE_RELEASE</string>
+	<string>SWVDtyF5NMBMpQhzrunDqUvIITQR/glXAasnbYRa68A=</string>
+	<key>SURequireSignedFeed</key>
+	<true/>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict/>
