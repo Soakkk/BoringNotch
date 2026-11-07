@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+from personal_codesign import PersonalCodeSigner
 
 ROOT = Path(__file__).resolve().parents[1]
 META = json.loads((ROOT / 'Release/personal.json').read_text())
@@ -48,6 +49,13 @@ def validate_app(app):
 
 
 def sign_app(app, library_exception):
+    with PersonalCodeSigner(ROOT / 'Release/codesign-certificate.pem',
+                            META.get('codesign_certificate_sha256')) as signer:
+        _sign_app(app, library_exception, signer)
+        return signer.manifest
+
+
+def _sign_app(app, library_exception, signer):
     """Sign from the inside out, preserving Sparkle's per-service entitlements."""
     bundles = [p for p in app.rglob('*') if p.is_dir() and not p.is_symlink()
                and p.suffix in ('.xpc', '.app', '.framework')]
@@ -74,18 +82,19 @@ def sign_app(app, library_exception):
             with path.open('rb') as stream:
                 magic = stream.read(4)
             if magic in (b'\xcf\xfa\xed\xfe', b'\xce\xfa\xed\xfe', b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf'):
-                run('codesign', '--force', '--sign', '-', '--timestamp=none', '--options', 'runtime', path)
+                signer.sign(path)
         for index, bundle in enumerate(bundles + [app]):
             path = Path(temporary) / f'{index}.plist'
             path.write_bytes(plistlib.dumps(entitlements[bundle]))
-            run('codesign', '--force', '--sign', '-', '--timestamp=none', '--options', 'runtime',
-                '--entitlements', path, bundle)
+            signer.sign(bundle, path)
     run('codesign', '--verify', '--deep', '--strict', '--verbose=2', app)
     signed = run('codesign', '-d', '--entitlements', ':-', app,
                  stdout=subprocess.PIPE, stderr=subprocess.DEVNULL).stdout
     assert plistlib.loads(signed)['com.apple.security.app-sandbox'] is True
     flags = run('codesign', '-dv', '--verbose=4', app, capture_output=True, text=True).stderr
-    assert 'runtime' in flags and 'Signature=adhoc' in flags
+    assert 'runtime' in flags and 'Signature=adhoc' not in flags
+    signer.verify(app, META['bundle_id'])
+    signer.verify(helper, META['helper_id'])
 
 
 def sign_update(tool, path, secret, *args):
@@ -100,7 +109,9 @@ def main():
     parser.add_argument('--sign-update', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--source-sha', required=True)
-    parser.add_argument('--allow-adhoc-library-validation-exception', action='store_true',
+    parser.add_argument('--allow-personal-library-validation-exception',
+                        '--allow-adhoc-library-validation-exception',
+                        dest='allow_personal_library_validation_exception', action='store_true',
                         help='Explicit personal-signing exception; see Release/README.md before use')
     args = parser.parse_args()
     if len(args.source_sha) != 40 or any(c not in '0123456789abcdef' for c in args.source_sha):
@@ -125,7 +136,7 @@ def main():
         (resources / 'PERSONAL_SOURCE.txt').write_text(
             f"BoringNotch Personal is a GPL fork of TheBoredTeam/boring.notch.\n"
             f"Corresponding source: https://github.com/{META['repository']}/tree/{args.source_sha}\n")
-        sign_app(app, args.allow_adhoc_library_validation_exception)
+        code_identity = sign_app(app, args.allow_personal_library_validation_exception)
         basename = f"BoringNotch-Personal-{META['version']}"
         archive = args.output / (basename + '.zip')
         run('ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', app, archive)
@@ -147,7 +158,7 @@ def main():
         ET.SubElement(item, f'{{{SPARKLE}}}shortVersionString').text = META['version']
         ET.SubElement(item, f'{{{SPARKLE}}}minimumSystemVersion').text = '15.0.0'
         ET.SubElement(item, 'pubDate').text = datetime.datetime.now(datetime.timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')
-        ET.SubElement(item, 'description').text = 'Nuevos indicadores segmentados de volumen y brillo, con animaciones breves y ajuste continuo. Adaptados al ahorro de energía y a Reducir movimiento. Versión personal con firma local; código fuente y licencia GPL incluidos.'
+        ET.SubElement(item, 'description').text = 'Firma personal estable para conservar los permisos entre actualizaciones. El cambio inicial desde la firma anterior puede requerir autorizarlos una vez. Se mantienen los indicadores segmentados y el ahorro inteligente. Código fuente GPL y licencias incluidos.'
         ET.SubElement(item, 'enclosure', {
             'url': f"https://github.com/{META['repository']}/releases/download/personal-v{META['version']}/{archive.name}",
             f'{{{SPARKLE}}}edSignature': signature, 'length': str(archive.stat().st_size),
@@ -159,9 +170,9 @@ def main():
         sign_update(args.sign_update, feed, secret)
         run(args.sign_update, '--ed-key-file', '-', '--verify', feed,
             input=secret, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        manifest = dict(META, source_sha=args.source_sha, signing='ad-hoc', notarized=False,
+        manifest = dict(META, **code_identity, source_sha=args.source_sha, notarized=False,
                         public_key=info['SUPublicEDKey'],
-                        library_validation_exception=args.allow_adhoc_library_validation_exception,
+                        library_validation_exception=args.allow_personal_library_validation_exception,
                         archive_signature=signature)
         (args.output / 'release-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
         files = sorted(args.output.iterdir())
