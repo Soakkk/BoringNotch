@@ -23,5 +23,9 @@
 	<array>
 		<dict/>
 	</array>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>BoringNotch Personal necesita acceder a tus calendarios para mostrar tus eventos en la agenda.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>BoringNotch Personal necesita acceder a tus recordatorios para mostrar las tareas programadas en la agenda.</string>
 </dict>
 </plist>
