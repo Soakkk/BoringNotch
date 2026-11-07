@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import shlex
 import subprocess
 import tempfile
 
@@ -16,6 +17,7 @@ def private_command(*args, input=None):
         hints = {b'MAC verification failed': 'PKCS#12 import verification failed',
                  b'User interaction is not allowed': 'keychain authorization unavailable',
                  b'CSSMERR_TP_NOT_TRUSTED': 'certificate trust rejected',
+                 b'no identity found': 'signing identity unavailable',
                  b'errSecInternalComponent': 'code-signing security service rejected the operation'}
         hint = next((value for marker, value in hints.items() if marker in result.stderr), 'operation failed')
         raise RuntimeError(f'Personal signing: {Path(args[0]).name} {hint} ({result.returncode})')
@@ -43,6 +45,7 @@ class PersonalCodeSigner:
             raise ValueError('Public signing identity does not match the pinned certificate')
         self.temporary = None
         self.keychain = None
+        self.original_search_list = None
 
     def __enter__(self):
         self.temporary = tempfile.TemporaryDirectory(prefix='boring-codesign-')
@@ -68,6 +71,12 @@ class PersonalCodeSigner:
                             '-T', '/usr/bin/codesign')
             private_command('security', 'set-key-partition-list', '-S', 'apple-tool:,apple:,codesign:',
                             '-s', '-k', keychain_password, self.keychain)
+            # --keychain selects the identity but still requires its keychain in
+            # the search list on headless runners. Restore the exact list on exit.
+            self.original_search_list = shlex.split(
+                private_command('security', 'list-keychains', '-d', 'user').decode())
+            private_command('security', 'list-keychains', '-d', 'user', '-s',
+                            self.keychain, *self.original_search_list)
             archive.unlink()
             self.pkcs12 = b''
             self.password = ''
@@ -93,9 +102,14 @@ class PersonalCodeSigner:
         return {'signing': 'personal-certificate', 'codesign_certificate_sha256': self.sha256}
 
     def __exit__(self, *_):
-        if self.keychain is not None and self.keychain.exists():
-            subprocess.run(['security', 'delete-keychain', str(self.keychain)], capture_output=True)
-        if self.temporary is not None:
-            self.temporary.cleanup()
-        self.pkcs12 = b''
-        self.password = ''
+        try:
+            if self.original_search_list is not None:
+                private_command('security', 'list-keychains', '-d', 'user', '-s',
+                                *self.original_search_list)
+        finally:
+            if self.keychain is not None and self.keychain.exists():
+                subprocess.run(['security', 'delete-keychain', str(self.keychain)], capture_output=True)
+            if self.temporary is not None:
+                self.temporary.cleanup()
+            self.pkcs12 = b''
+            self.password = ''

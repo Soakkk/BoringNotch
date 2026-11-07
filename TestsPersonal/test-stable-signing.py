@@ -167,6 +167,22 @@ class StableSigningTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'pinned certificate'):
                 release.sign_app(self.folder / 'unused.app', True)
 
+    def test_native_signing_failure_restores_search_list_and_removes_private_files(self):
+        search_list = run('security', 'list-keychains', '-d', 'user')
+        with patch.dict(os.environ, self.credentials):
+            signer = release.PersonalCodeSigner(self.cert, self.pin)
+            with self.assertRaises(RuntimeError) as error:
+                with signer:
+                    folder = signer.keychain.parent
+                    # codesign documents this prerequisite even with --keychain.
+                    self.assertIn(str(signer.keychain).encode(),
+                                  run('security', 'list-keychains', '-d', 'user'))
+                    self.assertFalse((folder / 'identity.p12').exists())
+                    signer.sign(self.folder / 'missing-native-binary')
+        self.assertNotIn(self.credentials['BORINGNOTCH_CODESIGN_PASSWORD'], str(error.exception))
+        self.assertFalse(folder.exists(), 'Failed signing must remove its private keychain directory')
+        self.assertEqual(run('security', 'list-keychains', '-d', 'user'), search_list)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -25,7 +25,7 @@
 - Missing credentials and mismatched certificates must stop signing rather than fall back to ad-hoc.
 - Different app contents signed with the pinned certificate must satisfy each other's designated requirements; another certificate or ad-hoc signature must fail.
 - App, XPC helper and nested framework/tools retain valid signatures and their existing entitlements.
-- Keychain import failures and signing failures must clean up temporary private files without logging secret values or modifying the normal keychain search list.
+- Keychain import failures and signing failures must clean up temporary private files without logging secret values and restore the normal keychain search list after its temporary registration during signing.
 - The installed first candidate must retain its granted Accessibility/calendar/reminder access after a normal Sparkle update to the second candidate, without a second authorization.
 
 ### Task 1: Certificate identity and native signing regression
