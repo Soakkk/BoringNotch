@@ -41,6 +41,8 @@ jobs:
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
+      - name: Verify segmented HUD inputs and native rendering
+        run: bash TestsPersonal/run-segmented-hud-tests.sh
       - name: Build unsigned universal app and helper
         run: bash Scripts/build-personal.sh
       - name: Upload packaged preview

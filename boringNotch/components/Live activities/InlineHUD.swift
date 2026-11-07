@@ -83,8 +83,10 @@ struct InlineHUD: View {
                                 VolumeManager.shared.setAbsolute(Float32(v))
                             } else if type == .brightness {
                                 BrightnessManager.shared.setAbsolute(value: Float32(v))
+                            } else if type == .backlight {
+                                KeyboardBacklightManager.shared.setAbsolute(value: Float32(v))
                             }
-                        })
+                        }, accessibilityLabel: type.hudLabel)
                         if (type == .volume && value.isZero) {
                             Text("muted")
                                 .font(.caption)
@@ -94,7 +96,7 @@ struct InlineHUD: View {
                                 .allowsTightening(true)
                                 .multilineTextAlignment(.trailing)
                         } else if Defaults[.showClosedNotchHUDPercentage] {
-                            Text("\(Int(value * 100))%")
+                            Text("\(Int(SegmentedLevel.normalized(value) * 100))%")
                                 .font(.caption)
                                 .fontWeight(.medium)
                                 .foregroundStyle(.gray)
