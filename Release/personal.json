@@ -1,0 +1,9 @@
+{
+  "name": "BoringNotch Personal",
+  "version": "3.0.0",
+  "build": "300000",
+  "bundle_id": "com.soakkk.BoringNotch",
+  "helper_id": "com.soakkk.BoringNotch.BoringNotchXPCHelper",
+  "repository": "Soakkk/BoringNotch",
+  "feed": "https://raw.githubusercontent.com/Soakkk/BoringNotch/main/updater/personal-appcast.xml"
+}

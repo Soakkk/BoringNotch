@@ -17,6 +17,8 @@ class CalendarManager: ObservableObject {
 
     @Published var currentWeekStartDate: Date
     @Published var events: [EventModel] = []
+    @Published private(set) var isLoading = false
+    private var eventsRequest = 0
     @Published var allCalendars: [CalendarModel] = []
     @Published var eventCalendars: [CalendarModel] = []
     @Published var reminderLists: [CalendarModel] = []
@@ -30,6 +32,8 @@ class CalendarManager: ObservableObject {
 
     private init() {
         self.currentWeekStartDate = CalendarManager.startOfDay(Date())
+        self.calendarAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        self.reminderAuthorizationStatus = EKEventStore.authorizationStatus(for: .reminder)
         setupEventStoreChangedObserver()
         Task {
             await reloadCalendarAndReminderLists()
@@ -50,6 +54,7 @@ class CalendarManager: ObservableObject {
         ) { [weak self] _ in
             Task {
                 await self?.reloadCalendarAndReminderLists()
+                await self?.updateEvents()
             }
         }
     }
@@ -65,10 +70,7 @@ class CalendarManager: ObservableObject {
 
     func checkCalendarAuthorization() async {
         let status = EKEventStore.authorizationStatus(for: .event)
-        DispatchQueue.main.async {
-            print("📅 Current calendar authorization status: \(status)")
-            self.calendarAuthorizationStatus = status
-        }
+        self.calendarAuthorizationStatus = status
 
         switch status {
         case .notDetermined:
@@ -79,20 +81,14 @@ class CalendarManager: ObservableObject {
             self.calendarAuthorizationStatus = granted ? .fullAccess : .denied
             if granted {
                 await reloadCalendarAndReminderLists()
-                events = await calendarService.events(
-                    from: currentWeekStartDate,
-                    to: Calendar.current.date(byAdding: .day, value: 1, to: currentWeekStartDate)!,
-                    calendars: selectedCalendars.map { $0.id })
+                await updateEvents()
             }
         case .restricted, .denied:
             NSLog("Calendar access denied or restricted")
         case .fullAccess:
             NSLog("Full access")
             await reloadCalendarAndReminderLists()
-            events = await calendarService.events(
-                from: currentWeekStartDate,
-                to: Calendar.current.date(byAdding: .day, value: 1, to: currentWeekStartDate)!,
-                calendars: selectedCalendars.map { $0.id })
+            await updateEvents()
         case .writeOnly:
             NSLog("Write only")
         @unknown default:
@@ -102,10 +98,7 @@ class CalendarManager: ObservableObject {
     
     func checkReminderAuthorization() async {
         let status = EKEventStore.authorizationStatus(for: .reminder)
-        DispatchQueue.main.async {
-            print("📅 Current reminder authorization status: \(status)")
-            self.reminderAuthorizationStatus = status
-        }
+        self.reminderAuthorizationStatus = status
 
         switch status {
         case .notDetermined:
@@ -184,21 +177,24 @@ class CalendarManager: ObservableObject {
     }
 
     private func updateEvents() async {
+        eventsRequest += 1
+        let request = eventsRequest
+        let day = currentWeekStartDate
+        isLoading = true
+        defer { if request == eventsRequest { isLoading = false } }
         let calendarIDs = selectedCalendars.map { $0.id }
         let eventsResult = await calendarService.events(
             from: currentWeekStartDate,
             to: Calendar.current.date(byAdding: .day, value: 1, to: currentWeekStartDate)!,
             calendars: calendarIDs
         )
+        guard request == eventsRequest, day == currentWeekStartDate else { return }
         self.events = eventsResult
     }
     
     func setReminderCompleted(reminderID: String, completed: Bool) async {
         await calendarService.setReminderCompleted(reminderID: reminderID, completed: completed)
         // Refresh events after updating
-        events = await calendarService.events(
-            from: currentWeekStartDate,
-            to: Calendar.current.date(byAdding: .day, value: 1, to: currentWeekStartDate)!,
-            calendars: selectedCalendars.map { $0.id })
+        await updateEvents()
     }
 }
