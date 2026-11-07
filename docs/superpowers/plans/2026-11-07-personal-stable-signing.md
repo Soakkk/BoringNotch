@@ -58,19 +58,21 @@
 
 **Interfaces:** First candidate at the existing installation path; second candidate delivered through the existing Sparkle feed with a strictly increasing build and identical certificate identity.
 
-- [ ] Back up 3.1.2, install 3.1.3 and renew only existing grants through native settings/user handoff. Verify HUD, calendar/reminders and preferences before proceeding.
-- [ ] Merge reviewed source; publish the final five verified assets, verify public downloads, then activate the exact signed feed bytes last.
-- [ ] Use the first candidate's normal updater to install 3.1.4. Confirm the same path, expected version, identical signing identity and retained permissions without reauthorizing.
-- [ ] Verify normal panel, automatic checks/downloads and no regression in settled resource use. Record exact evidence and any limits; finish with a clean synchronized repository.
+- [x] Back up 3.1.2, install 3.1.3 and renew only existing grants through native settings/user handoff. Verify HUD, calendar/reminders and preferences before proceeding.
+- [x] Merge reviewed source; publish the final five verified assets, verify public downloads, then activate the exact signed feed bytes last.
+- [x] Use the first candidate's normal updater to install 3.1.4. Confirm the same path, expected version, identical signing identity and retained permissions without reauthorizing.
+- [x] Verify normal panel, automatic checks/downloads and no regression in settled resource use. Record exact evidence and any limits; finish with a clean synchronized repository.
 
-## Execution evidence and current handoff
+## Completed execution evidence
 
 - Six native signing tests and ten publication-policy tests passed locally and in GitHub. Existing segmented-HUD and release-signature checks passed. Independent review found no blocking defect.
 - Hosted signing exposed a documented `codesign` requirement: the temporary identity keychain must be registered in the search list even when explicitly selected. The regression was observed failing and then passing; the exact previous list is restored on success and native signing failure. No trust settings changed.
 - Migration source: `0d190eb6147940c712a1d2a566a39a85bf4bf68a`, run `42398919379`, version 3.1.3/build 301003.
 - Final source: `4fa58a90decc68650f41dde04f31b099571cb78c`, run `42398928503`, version 3.1.4/build 301004.
 - Both downloaded artifact archives match GitHub digests. All five release assets, hashes, Sparkle feed/archive signatures, actual app/helper certificate pins, mutual designated requirements, universal architectures and existing entitlements verified. Final publication guard passed.
-- 3.1.2 backed up; 3.1.3 installed and launched at the existing Applications path. Accessibility renewed through native settings and custom indicators restored. Calendar/reminder entries for this app alone renewed, with native user acceptance pending. Existing appearance, energy and automatic-update preferences preserved.
-- PR #5 merged; the verified final release is uploaded as a **draft**. The live feed still points to 3.1.2. This staging proceeds independently while awaiting native user interaction; it does not trigger an update.
-- Remaining acceptance: grant calendar/reminders once in 3.1.3, publish verified 3.1.4 assets and exact signed feed last, install via normal Sparkle update, verify all three grants persist without any further renewal, and record settled resource use.
+- 3.1.2 backed up; 3.1.3 installed and launched at the existing Applications path. Accessibility renewed through native settings and custom indicators restored. The user accepted the initial calendar/reminder renewal; both lists and existing selections were verified before updating again.
+- PR #5 merged as `48f322d92f95eff7a65fa60b6f4c5a463abe4410`. The final release was staged as a draft while awaiting user interaction, then published as `personal-v3.1.4`. All five anonymous public downloads matched the verified local artifacts before the signed feed was activated in `188ed2987354804702393b472d64094a50bba0d6`. The live feed matched its exact signed bytes and passed Ed25519 verification.
+- **Real update acceptance passed:** the running 3.1.3 app discovered 3.1.4 through its normal Sparkle updater, downloaded it, installed it and relaunched itself. No manual app replacement, permission reset, settings regrant or user permission acceptance occurred during this second update. Version 3.1.4/build 301004 and the source SHA were verified at `/Applications/BoringNotch Personal.app`; the installed app and helper retained the pinned certificate.
+- After the update, native settings showed recognized Accessibility and custom indicators enabled, both calendar/reminder lists with the existing selections, theme Esencial, Ahorro inteligente on, and automatic checks/downloads on. The normal music/calendar panel rendered and settings were closed. This proves the tested consecutive update on this Mac; future identity changes or OS policy changes are outside that result.
+- Resource observation with music paused: baseline 3.1.2 over25.06seconds measured0.0% main/helperCPU at ps resolution, RSS84.0/7.0MiB. The25.07seconds after3.1.4 UI checks measured0.479% mainCPU,0.0% helperCPU, RSS151.5/8.9MiB. This is a short observation near startup, not a battery benchmark or a claim of equal steady-state memory. No application timers or background-work code changed.
 - Minor deferred test coverage: a direct native-import-failure cleanup assertion. Native signing-failure cleanup is now automated and passing; wrong-password failure and missing/mismatched identities are covered.
