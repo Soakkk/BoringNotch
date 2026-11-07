@@ -43,6 +43,10 @@ jobs:
           persist-credentials: false
       - name: Verify segmented HUD inputs and native rendering
         run: bash TestsPersonal/run-segmented-hud-tests.sh
+      - name: Verify stable signing identity and publication policy
+        run: |
+          python3 TestsPersonal/test-stable-signing.py
+          python3 TestsPersonal/test-publication-guard.py
       - name: Build unsigned universal app and helper
         run: bash Scripts/build-personal.sh
       - name: Upload packaged preview
@@ -56,6 +60,8 @@ jobs:
         if: inputs.sign_release || inputs.publish
         env:
           BORINGNOTCH_SPARKLE_PRIVATE_KEY: ${{ secrets.BORINGNOTCH_SPARKLE_PRIVATE_KEY }}
+          BORINGNOTCH_CODESIGN_P12_BASE64: ${{ secrets.BORINGNOTCH_CODESIGN_P12_BASE64 }}
+          BORINGNOTCH_CODESIGN_PASSWORD: ${{ secrets.BORINGNOTCH_CODESIGN_PASSWORD }}
           SOURCE_SHA: ${{ inputs.source_sha }}
           LIBRARY_EXCEPTION: ${{ inputs.adhoc_library_exception }}
         run: |
@@ -66,7 +72,7 @@ jobs:
                 --sign-update "$SIGN_UPDATE" --output build/personal/release
                 --source-sha "$SOURCE_SHA")
           if [[ "$LIBRARY_EXCEPTION" == true ]]; then
-            ARGS+=(--allow-adhoc-library-validation-exception)
+            ARGS+=(--allow-personal-library-validation-exception)
           fi
           python3 Scripts/personal-release.py "${ARGS[@]}"
       - name: Upload signed release allowlist
