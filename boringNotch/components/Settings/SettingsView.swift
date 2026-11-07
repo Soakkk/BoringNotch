@@ -295,10 +295,10 @@ struct GeneralSettings: View {
                     HStack {
                         Text("Gesture sensitivity")
                         Spacer()
-                        Text(
+                        Text(LocalizedStringKey(
                             Defaults[.gestureSensitivity] == 100
                                 ? "High" : Defaults[.gestureSensitivity] == 200 ? "Medium" : "Low"
-                        )
+                        ))
                         .foregroundStyle(.secondary)
                     }
                 }
@@ -511,7 +511,7 @@ struct HUD: View {
             Section {
                 Picker("Option key behaviour", selection: $optionKeyAction) {
                     ForEach(OptionKeyAction.allCases) { opt in
-                        Text(opt.rawValue).tag(opt)
+                        Text(LocalizedStringKey(opt.rawValue)).tag(opt)
                     }
                 }
                 
@@ -606,7 +606,7 @@ struct Media: View {
             Section {
                 Picker("Music Source", selection: $mediaController) {
                     ForEach(availableMediaControllers) { controller in
-                        Text(controller.rawValue).tag(controller)
+                        Text(LocalizedStringKey(controller.rawValue)).tag(controller)
                     }
                 }
                 .onChange(of: mediaController) { _, _ in
@@ -647,7 +647,7 @@ struct Media: View {
                 Toggle("Show sneak peek on playback changes", isOn: $enableSneakPeek)
                 Picker("Sneak Peek Style", selection: $sneakPeekStyles) {
                     ForEach(SneakPeekStyle.allCases) { style in
-                        Text(style.rawValue).tag(style)
+                        Text(LocalizedStringKey(style.rawValue)).tag(style)
                     }
                 }
                 HStack {
@@ -1158,6 +1158,8 @@ struct Shelf: View {
 //}
 
 struct Appearance: View {
+    @AppStorage("personalTheme") private var personalTheme: PersonalTheme = .esencial
+    @ObservedObject private var energy = PersonalEnergyManager.shared
     @ObservedObject var coordinator = BoringViewCoordinator.shared
     @Default(.mirrorShape) var mirrorShape
     @Default(.sliderColor) var sliderColor
@@ -1174,6 +1176,40 @@ struct Appearance: View {
     @State private var speed: CGFloat = 1.0
     var body: some View {
         Form {
+            Section("Tu notch") {
+                HStack(spacing: 10) {
+                    ForEach(PersonalTheme.allCases) { theme in
+                        Button { personalTheme = theme } label: {
+                            VStack(alignment: .leading, spacing: 7) {
+                                HStack(spacing: 5) {
+                                    RoundedRectangle(cornerRadius: 5).fill(theme.accent.opacity(0.28)).frame(width: 26, height: 26)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Capsule().fill(theme.accent).frame(width: 30, height: 3)
+                                        Capsule().fill(theme.secondary).frame(width: 22, height: 2)
+                                    }
+                                    Spacer(minLength: 0)
+                                    Image(systemName: personalTheme == theme ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(theme.accent)
+                                }.padding(10).background(theme.surface, in: RoundedRectangle(cornerRadius: 12))
+                                Text(theme.title).font(.system(size: 12, weight: .semibold))
+                                Text(theme.detail).font(.system(size: 10)).foregroundStyle(.secondary)
+                            }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
+                        .accessibilityLabel(theme.title + ", " + theme.detail)
+                        .accessibilityAddTraits(personalTheme == theme ? .isSelected : [])
+                    }
+                }
+                Text("El espacio se adapta a tu agenda y a la música, conservando el tamaño del notch.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Consumo") {
+                Defaults.Toggle("Ahorro inteligente", key: .adaptiveEnergySaving)
+                Text("Reduce los efectos y las actualizaciones visuales al usar batería o el modo de bajo consumo de macOS.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Label(energy.conservesEnergy ? "Ahorro activo" : "Ritmo normal", systemImage: "leaf")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section {
                 Toggle("Always show tabs", isOn: $coordinator.alwaysShowTabs)
                 Defaults.Toggle(key: .settingsIconInNotch) {
@@ -1195,7 +1231,7 @@ struct Appearance: View {
                 }
                 Picker("Slider color", selection: $sliderColor) {
                     ForEach(SliderColorEnum.allCases, id: \.self) { option in
-                        Text(option.rawValue)
+                        Text(LocalizedStringKey(option.rawValue))
                     }
                 }
             } header: {
@@ -1718,7 +1754,7 @@ struct AccentCircleButton: View {
             }
         }
         .buttonStyle(.plain)
-        .help(isSystemDefault ? "Use your macOS system accent color" : "")
+        .help(LocalizedStringKey(isSystemDefault ? "Use your macOS system accent color" : ""))
     }
 }
 
@@ -1767,7 +1803,7 @@ func comingSoonTag() -> some View {
         .clipShape(.capsule)
 }
 
-func customBadge(text: String) -> some View {
+func customBadge(text: LocalizedStringKey) -> some View {
     Text(text)
         .foregroundStyle(.secondary)
         .font(.footnote.bold())

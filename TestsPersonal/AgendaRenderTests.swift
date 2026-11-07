@@ -10,9 +10,11 @@ import SwiftUI
             PersonalAgendaItem(id: "b", time: "11:30", endTime: "12:15", title: "Repaso de contabilidad y actividades pendientes", subtitle: "Personal · 45 min", color: .blue),
             PersonalAgendaItem(id: "c", time: "Todo el día", endTime: "", title: "Entrega de práctica", subtitle: "Calendario personal", color: .orange, completed: false)
         ]
-        for state in ["summary", "detail", "empty", "denied", "loading"] {
+        for theme in PersonalTheme.allCases {
+        for state in ["summary", "paused", "detail", "empty", "denied", "loading"] {
             var actions = [String]()
             let detailed = state == "detail"
+            let layout = PersonalPanelLayout.resolve(isPlaying: state != "paused", hasItems: state != "empty", loading: state == "loading", denied: state == "denied")
             let surface = PersonalAgendaSurface(heading: "Hoy · Sáb 7 nov", items: state == "empty" ? [] : items,
                 detailed: detailed, loading: state == "loading", denied: state == "denied",
                 onBack: { actions.append("back") }, onDetail: { actions.append("detail") },
@@ -22,19 +24,37 @@ import SwiftUI
             let root = VStack(spacing: 6) {
                 HStack { Image(systemName: "house"); Spacer(); Image(systemName: "gear"); Text("80%") }.font(.system(size: 11)).frame(height: 28)
                 HStack(spacing: 16) {
-                    if !detailed { VStack(alignment: .leading) { Text("Night Walk").font(.headline); Text("Ambient Sessions").foregroundStyle(.gray); Spacer(); HStack { Image(systemName: "backward.fill"); Spacer(); Image(systemName: "play.fill"); Spacer(); Image(systemName: "forward.fill") }; Spacer(); Rectangle().fill(.mint).frame(height: 3) }.frame(width: 264, height: 120); Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 116) }
+                    if !detailed {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 10) {
+                                RoundedRectangle(cornerRadius: theme.artworkRadius)
+                                    .fill(theme.accent.opacity(0.16))
+                                    .overlay(Image(systemName: "music.note").font(.system(size: 22)).foregroundStyle(theme.accent))
+                                    .frame(width: layout.artworkSize, height: layout.artworkSize)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Night Walk").font(.headline).lineLimit(1)
+                                    Text("Ambient Sessions").font(.subheadline).foregroundStyle(theme.secondary).lineLimit(1)
+                                }
+                            }
+                            Capsule().fill(theme.accent).frame(height: 3)
+                            HStack { Text("1:24"); Spacer(); Text("4:32") }.font(.system(size: 10)).foregroundStyle(theme.secondary)
+                            HStack(spacing: 22) { Image(systemName: "backward.fill"); Image(systemName: state == "paused" ? "play.fill" : "pause.fill"); Image(systemName: "forward.fill") }.frame(maxWidth: .infinity)
+                        }.frame(width: layout.musicWidth, height: 128)
+                        Rectangle().fill(theme.separator).frame(width: 1, height: 116)
+                    }
                     surface
                 }.frame(height: 128)
                 Spacer(minLength: 0)
-            }.padding(.horizontal, 31).padding(.bottom, 12).frame(width: 640, height: 190).foregroundStyle(.white).background(.black).clipShape(RoundedRectangle(cornerRadius: 24)).preferredColorScheme(.dark)
+            }.padding(.horizontal, 31).padding(.bottom, 12).frame(width: 640, height: 190).environment(\.personalTheme, theme).foregroundStyle(.white).background(theme.surface).clipShape(RoundedRectangle(cornerRadius: 24)).preferredColorScheme(.dark)
             let host = NSHostingView(rootView: root); host.sizingOptions = []; host.frame = NSRect(x: 0,y: 0,width: 640,height: 190)
             let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false); window.contentView = host; window.orderFrontRegardless()
             RunLoop.main.run(until: Date().addingTimeInterval(0.15))
             precondition(host.bounds.size == NSSize(width: 640,height: 190), "Every state preserves the approved footprint")
             let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!; host.cacheDisplay(in: host.bounds, to: bitmap)
-            try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("\(state).png"))
+            try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("\(theme.rawValue)-\(state).png"))
             window.orderOut(nil)
         }
-        print("Five native agenda states rendered at640×190; long titles, all-day/reminder, empty, denied and loading fit")
+        }
+        print("18 native theme/layout fixtures rendered at640×190; long titles, all-day/reminder, paused, empty, denied and loading fit")
     }
 }

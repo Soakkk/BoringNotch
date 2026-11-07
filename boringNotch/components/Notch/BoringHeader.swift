@@ -9,6 +9,7 @@ import Defaults
 import SwiftUI
 
 struct BoringHeader: View {
+    @AppStorage("personalTheme") private var theme: PersonalTheme = .esencial
     @EnvironmentObject var vm: BoringViewModel
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = BoringViewCoordinator.shared
@@ -47,7 +48,7 @@ struct BoringHeader: View {
                                 vm.toggleCameraPreview()
                             }) {
                                 Capsule()
-                                    .fill(.black)
+                                    .fill(theme.surface)
                                     .frame(width: 30, height: 30)
                                     .overlay {
                                         Image(systemName: "web.camera")
@@ -66,7 +67,7 @@ struct BoringHeader: View {
                                 
                             }) {
                                 Capsule()
-                                    .fill(.black)
+                                    .fill(theme.surface)
                                     .frame(width: 30, height: 30)
                                     .overlay {
                                         Image(systemName: "gear")

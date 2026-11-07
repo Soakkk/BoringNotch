@@ -19,19 +19,21 @@ struct MusicPlayerView: View {
     var body: some View {
         HStack {
             AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace).padding(.all, 5)
-            MusicControlsView().drawingGroup().compositingGroup()
+            MusicControlsView()
         }
     }
 }
 
 struct AlbumArtView: View {
+    @ObservedObject private var energy = PersonalEnergyManager.shared
+    @Environment(\.personalTheme) private var theme
     @ObservedObject var musicManager = MusicManager.shared
     @ObservedObject var vm: BoringViewModel
     let albumArtNamespace: Namespace.ID
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            if Defaults[.lightingEffect] {
+            if Defaults[.lightingEffect] && energy.allowsDecorativeAnimation {
                 albumArtBackground
             }
             albumArtButton
@@ -44,9 +46,7 @@ struct AlbumArtView: View {
             .clipped()
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: Defaults[.cornerRadiusScaling]
-                        ? MusicPlayerImageSizes.cornerRadiusInset.opened
-                        : MusicPlayerImageSizes.cornerRadiusInset.closed)
+                    cornerRadius: theme.artworkRadius)
             )
             .aspectRatio(1, contentMode: .fit)
             .scaleEffect(x: 1.3, y: 1.4)
@@ -66,20 +66,9 @@ struct AlbumArtView: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
-            .scaleEffect(musicManager.isPlaying ? 1 : 0.85)
-            
-            albumArtDarkOverlay
+            .opacity(musicManager.isPlaying ? 1 : 0.82)
         }
     }
-
-    private var albumArtDarkOverlay: some View {
-        Rectangle()
-            .aspectRatio(1, contentMode: .fit)
-            .foregroundColor(Color.black)
-            .opacity(musicManager.isPlaying ? 0 : 0.8)
-            .blur(radius: 50)
-    }
-                
 
     private var albumArtImage: some View {
         Image(nsImage: musicManager.albumArt)
@@ -89,9 +78,7 @@ struct AlbumArtView: View {
             .clipped()
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: Defaults[.cornerRadiusScaling]
-                        ? MusicPlayerImageSizes.cornerRadiusInset.opened
-                        : MusicPlayerImageSizes.cornerRadiusInset.closed)
+                    cornerRadius: theme.artworkRadius)
             )
     }
 
@@ -101,8 +88,8 @@ struct AlbumArtView: View {
             AppIcon(for: musicManager.bundleIdentifier ?? "com.apple.Music")
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(width: 30, height: 30)
-                .offset(x: 10, y: 10)
+                .frame(width: 16, height: 16)
+                .offset(x: 3, y: 3)
                 .transition(.scale.combined(with: .opacity))
                 .zIndex(2)
         }
@@ -110,6 +97,10 @@ struct AlbumArtView: View {
 }
 
 struct MusicControlsView: View {
+    var albumArtNamespace: Namespace.ID? = nil
+    var artworkSize: CGFloat = 52
+    @ObservedObject private var energy = PersonalEnergyManager.shared
+    @Environment(\.personalTheme) private var theme
     @ObservedObject var musicManager = MusicManager.shared
         @EnvironmentObject var vm: BoringViewModel
         @ObservedObject var webcamManager = WebcamManager.shared
@@ -120,41 +111,41 @@ struct MusicControlsView: View {
     @Default(.musicControlSlotLimit) private var slotLimit
 
     var body: some View {
-        VStack(alignment: .leading) {
-            songInfoAndSlider
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 10) {
+                if let namespace = albumArtNamespace {
+                    AlbumArtView(vm: vm, albumArtNamespace: namespace)
+                        .frame(width: artworkSize, height: artworkSize)
+                        .accessibilityLabel("Abrir aplicación de música")
+                }
+                GeometryReader { geo in
+                    songInfo(width: geo.size.width)
+                        .frame(maxHeight: .infinity, alignment: .center)
+                }
+            }.frame(height: artworkSize)
+            musicSlider
             slotToolbar
         }
         .buttonStyle(PlainButtonStyle())
-    }
-
-    private var songInfoAndSlider: some View {
-        GeometryReader { geo in
-            VStack(alignment: .leading, spacing: 4) {
-                songInfo(width: geo.size.width)
-                musicSlider
-            }
-        }
-        .padding(.top, 10)
-        .padding(.leading, 5)
+        .tint(theme.accent)
     }
 
     private func songInfo(width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             MarqueeText(
-                $musicManager.songTitle, font: .headline, nsFont: .headline, textColor: .white,
-                frameWidth: width, isPlaying: musicManager.isPlaying)
+                Binding(get: { !musicManager.songTitle.isEmpty ? musicManager.songTitle : "Tu música" }, set: { _ in }), font: .headline, nsFont: .headline, textColor: .white,
+                frameWidth: width, isPlaying: musicManager.isPlaying && energy.allowsDecorativeAnimation)
             MarqueeText(
-                $musicManager.artistName,
-                font: .headline,
-                nsFont: .headline,
-                textColor: Defaults[.playerColorTinting]
-                    ? Color(nsColor: musicManager.avgColor)
-                        .ensureMinimumBrightness(factor: 0.6) : .gray,
+                Binding(get: { !musicManager.artistName.isEmpty ? musicManager.artistName : "Elige algo para escuchar" }, set: { _ in }),
+                font: .subheadline,
+                nsFont: .subheadline,
+                textColor: theme.secondary,
                 frameWidth: width, isPlaying: musicManager.isPlaying
             )
             .fontWeight(.medium)
+            .help(musicManager.songTitle + " · " + musicManager.artistName)
             if Defaults[.enableLyrics] {
-                TimelineView(.animation(minimumInterval: 0.25, paused: !musicManager.isPlaying)) { timeline in
+                TimelineView(.animation(minimumInterval: energy.progressInterval, paused: !musicManager.isPlaying || !energy.screenIsAwake)) { timeline in
                     let currentElapsed: Double = {
                         guard musicManager.isPlaying else { return musicManager.elapsedTime }
                         let delta = timeline.date.timeIntervalSince(musicManager.timestampDate)
@@ -162,12 +153,12 @@ struct MusicControlsView: View {
                         return min(max(progressed, 0), musicManager.songDuration)
                     }()
                     let line: String = {
-                        if musicManager.isFetchingLyrics { return "Loading lyrics…" }
+                        if musicManager.isFetchingLyrics { return "Cargando letra…" }
                         if !musicManager.syncedLyrics.isEmpty {
                             return musicManager.lyricLine(at: currentElapsed)
                         }
                         let trimmed = musicManager.currentLyrics.trimmingCharacters(in: .whitespacesAndNewlines)
-                        return trimmed.isEmpty ? "No lyrics found" : trimmed.replacingOccurrences(of: "\n", with: " ")
+                        return trimmed.isEmpty ? "No hay letra disponible" : trimmed.replacingOccurrences(of: "\n", with: " ")
                     }()
                     let isPersian = line.unicodeScalars.contains { scalar in
                         let v = scalar.value
@@ -190,7 +181,7 @@ struct MusicControlsView: View {
     }
 
     private var musicSlider: some View {
-        TimelineView(.animation(minimumInterval: 0.25, paused: !musicManager.isPlaying || musicManager.playbackRate <= 0)) { timeline in
+        TimelineView(.animation(minimumInterval: energy.progressInterval, paused: !musicManager.isPlaying || musicManager.playbackRate <= 0 || !energy.screenIsAwake)) { timeline in
             MusicSliderView(
                 sliderValue: $sliderValue,
                 duration: $musicManager.songDuration,
@@ -205,8 +196,7 @@ struct MusicControlsView: View {
             ) { newValue in
                 MusicManager.shared.seek(to: newValue)
             }
-            .padding(.top, 5)
-            .frame(height: 36)
+            .frame(height: 28)
         }
     }
 
@@ -419,6 +409,11 @@ struct VolumeControlView: View {
 // MARK: - Main View
 
 struct NotchHomeView: View {
+    @AppStorage("personalTheme") private var theme: PersonalTheme = .esencial
+    @ObservedObject private var energy = PersonalEnergyManager.shared
+    @ObservedObject private var musicManager = MusicManager.shared
+    @Default(.showCalendar) private var showCalendar
+    @State private var agendaNow = Date()
     @EnvironmentObject var vm: BoringViewModel
     @ObservedObject var webcamManager = WebcamManager.shared
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
@@ -426,7 +421,7 @@ struct NotchHomeView: View {
     let albumArtNamespace: Namespace.ID
     @ObservedObject private var calendarManager = CalendarManager.shared
     @State private var agendaDetail = false
-    @State private var selectedDate = CalendarManager.shared.currentWeekStartDate
+    @State private var selectedDate = Calendar.current.startOfDay(for: Date())
 
     var body: some View {
         Group {
@@ -434,28 +429,32 @@ struct NotchHomeView: View {
                 personalContent
             }
         }
-        // simplified: use a straightforward opacity transition
+        .environment(\.personalTheme, theme)
         .transition(.opacity)
+        .task(id: energy.screenIsAwake && showCalendar) {
+            guard energy.screenIsAwake && showCalendar else { return }
+            refreshAgendaClock()
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                refreshAgendaClock()
+            }
+        }
     }
 
     @ViewBuilder private var personalContent: some View {
         if shouldShowCamera { mainContent }
-        else if !Defaults[.showCalendar] { MusicPlayerView(albumArtNamespace: albumArtNamespace).frame(height: 128) }
+        else if !showCalendar { MusicControlsView(albumArtNamespace: albumArtNamespace, artworkSize: 60).frame(height: 128) }
         else {
             HStack(spacing: 16) {
                 if !agendaDetail {
-                    HStack(spacing: 12) {
-                        AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
-                            .frame(width: 72, height: 72)
-                            .accessibilityLabel("Abrir aplicación de música")
-                        MusicControlsView().frame(maxWidth: .infinity)
-                    }.frame(width: 264, height: 120)
-                    Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 116)
+                    MusicControlsView(albumArtNamespace: albumArtNamespace, artworkSize: panelLayout.artworkSize)
+                        .frame(width: panelLayout.musicWidth, height: 128)
+                    Rectangle().fill(theme.separator).frame(width: 1, height: 116)
                 }
                 PersonalAgendaSurface(
                     heading: agendaHeading, items: agendaItems,
-                    detailed: agendaDetail, loading: calendarManager.isLoading,
-                    denied: calendarManager.calendarAuthorizationStatus != .fullAccess && calendarManager.reminderAuthorizationStatus != .fullAccess,
+                    detailed: agendaDetail, loading: agendaLoading,
+                    denied: agendaDenied,
                     onBack: { agendaDetail = false }, onDetail: { agendaDetail = true },
                     onPrevious: { changeDay(-1) }, onNext: { changeDay(1) },
                     onToday: { selectedDate = Calendar.current.startOfDay(for: Date()) },
@@ -474,6 +473,21 @@ struct NotchHomeView: View {
         }
     }
 
+    private var agendaDenied: Bool {
+        calendarManager.calendarAuthorizationStatus != .fullAccess && calendarManager.reminderAuthorizationStatus != .fullAccess
+    }
+    private var agendaLoading: Bool {
+        calendarManager.isLoading || !Calendar.current.isDate(selectedDate, inSameDayAs: calendarManager.currentWeekStartDate)
+    }
+    private var panelLayout: PersonalPanelLayout {
+        PersonalPanelLayout.resolve(isPlaying: musicManager.isPlaying, hasItems: !agendaItems.isEmpty,
+                                    loading: agendaLoading, denied: agendaDenied)
+    }
+    private func refreshAgendaClock() {
+        let now = Date()
+        selectedDate = PersonalAgendaClock.selectedDay(after: now, previousNow: agendaNow, selectedDay: selectedDate)
+        agendaNow = now
+    }
     private var agendaHeading: String {
         let prefix = Calendar.current.isDateInToday(selectedDate) ? "Hoy · " : ""
         return prefix + selectedDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)).capitalized
@@ -481,7 +495,7 @@ struct NotchHomeView: View {
     private var agendaItems: [PersonalAgendaItem] {
         let events = EventListView.filteredEvents(events: calendarManager.events).sorted { $0.start < $1.start }
         let candidates = !agendaDetail && Calendar.current.isDateInToday(selectedDate)
-            ? events.filter { $0.isAllDay || $0.end > Date() || $0.type.isReminder } : events
+            ? events.filter { $0.isAllDay || $0.end > agendaNow || $0.type.isReminder } : events
         return candidates.map { event in
             let time = event.isAllDay ? "Todo el día" : event.start.formatted(date: .omitted, time: .shortened)
             let end = event.isAllDay ? "" : event.end.formatted(date: .omitted, time: .shortened)
@@ -528,6 +542,7 @@ struct NotchHomeView: View {
 }
 
 struct MusicSliderView: View {
+    @Environment(\.personalTheme) private var theme
     @Binding var sliderValue: Double
     @Binding var duration: Double
     @Binding var lastDragged: Date
@@ -546,9 +561,9 @@ struct MusicSliderView: View {
             CustomSlider(
                 value: $sliderValue,
                 range: 0...duration,
-                color: Defaults[.sliderColor] == SliderColorEnum.albumArt
+                color: Defaults[.sliderColor] == .albumArt
                     ? Color(nsColor: color).ensureMinimumBrightness(factor: 0.8)
-                    : Defaults[.sliderColor] == SliderColorEnum.accent ? .effectiveAccent : .white,
+                    : Defaults[.sliderColor] == .accent ? .effectiveAccent : theme.accent,
                 dragging: $dragging,
                 lastDragged: $lastDragged,
                 onValueChange: onValueChange
@@ -561,10 +576,7 @@ struct MusicSliderView: View {
                 Text(timeString(from: duration))
             }
             .fontWeight(.medium)
-            .foregroundColor(
-                Defaults[.playerColorTinting]
-                    ? Color(nsColor: color).ensureMinimumBrightness(factor: 0.6) : .gray
-            )
+            .foregroundColor(theme.secondary)
             .font(.caption)
         }
         .onAppear { updatePosition() }
@@ -657,6 +669,7 @@ struct PersonalAgendaItem: Identifiable {
 }
 
 struct PersonalAgendaSurface: View {
+    @Environment(\.personalTheme) private var theme
     let heading: String
     let items: [PersonalAgendaItem]
     let detailed: Bool
@@ -677,8 +690,8 @@ struct PersonalAgendaSurface: View {
                 if detailed { icon("chevron.left", "Volver a música", action: onBack) }
                 Button(action: onDetail) {
                     HStack(spacing: 6) {
-                        Image(systemName: "calendar").font(.system(size: 12))
-                        Text(heading).font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                        Image(systemName: "calendar").font(.system(size: 12)).foregroundStyle(theme.accent)
+                        Text(heading).font(.system(size: 12, weight: .semibold, design: theme.headingDesign)).lineLimit(1)
                     }.contentShape(Rectangle())
                 }.buttonStyle(.plain).help("Ver la agenda completa sin ampliar el notch")
                 Spacer(minLength: 0)
@@ -689,7 +702,7 @@ struct PersonalAgendaSurface: View {
             if denied {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Permite el acceso al calendario").font(.system(size: 12, weight: .medium))
-                    Button("Abrir ajustes", action: onSettings).buttonStyle(.plain).foregroundStyle(.mint)
+                    Button("Abrir ajustes", action: onSettings).buttonStyle(.plain).foregroundStyle(theme.accent)
                 }.frame(maxHeight: .infinity, alignment: .center)
             } else if loading {
                 HStack(spacing: 8) { ProgressView().controlSize(.small); Text("Cargando agenda…").font(.system(size: 12)) }
@@ -697,8 +710,8 @@ struct PersonalAgendaSurface: View {
             } else if items.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Sin eventos pendientes").font(.system(size: 13, weight: .semibold))
-                    Text("Consulta otro día con las flechas").font(.system(size: 11)).foregroundStyle(.white.opacity(0.65))
-                    if !detailed { Button("Ver el día completo", action: onDetail).buttonStyle(.plain).foregroundStyle(.mint).font(.system(size: 11)) }
+                    Text("Consulta otro día").font(.system(size: 11)).foregroundStyle(theme.secondary)
+                    if !detailed { Button("Ver el día completo", action: onDetail).buttonStyle(.plain).foregroundStyle(theme.accent).font(.system(size: 11)) }
                 }.frame(maxHeight: .infinity, alignment: .center)
             } else {
                 ScrollView(.vertical, showsIndicators: detailed) {
@@ -707,7 +720,7 @@ struct PersonalAgendaSurface: View {
                             HStack(alignment: .center, spacing: 8) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.time)
-                                    if detailed && !item.endTime.isEmpty { Text(item.endTime).foregroundStyle(.white.opacity(0.6)) }
+                                    if detailed && !item.endTime.isEmpty { Text(item.endTime).foregroundStyle(theme.secondary) }
                                 }.font(.system(size: detailed ? 12 : 11, weight: .medium)).monospacedDigit()
                                     .frame(width: detailed ? 52 : 46, alignment: .leading)
                                 if let completed = item.completed {
@@ -721,13 +734,13 @@ struct PersonalAgendaSurface: View {
                                         Text(item.title).font(.system(size: detailed ? 13 : 12, weight: .semibold))
                                             .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
                                         if detailed || item.title.count < 30 {
-                                            Text(item.subtitle).font(.system(size: 10)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                                            Text(item.subtitle).font(.system(size: 10)).foregroundStyle(theme.secondary).lineLimit(1)
                                         }
                                     }.frame(maxWidth: .infinity, minHeight: detailed ? 39 : 30, alignment: .leading)
                                         .contentShape(Rectangle())
                                 }.buttonStyle(.plain).help(item.title)
                             }.accessibilityElement(children: .contain)
-                            if detailed { Rectangle().fill(.white.opacity(0.1)).frame(height: 0.5) }
+                            if detailed { Rectangle().fill(theme.separator).frame(height: 0.5) }
                         }
                     }
                 }
