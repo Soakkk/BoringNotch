@@ -43,6 +43,13 @@ jobs:
           persist-credentials: false
       - name: Build unsigned universal app and helper
         run: bash Scripts/build-personal.sh
+      - name: Upload packaged preview
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: personal-unsigned-${{ inputs.source_sha }}
+          path: build/personal/BoringNotch-Personal-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14
       - name: Sign and package personal release
         if: inputs.sign_release || inputs.publish
         env:
@@ -53,21 +60,13 @@ jobs:
           set -euo pipefail
           SIGN_UPDATE="$(find build/personal/packages/artifacts/sparkle -type f -name sign_update -perm +111 -print -quit)"
           test -n "$SIGN_UPDATE"
-          FLAGS=()
+          ARGS=(--app 'build/personal/DerivedData/Build/Products/Release/BoringNotch Personal.app'
+                --sign-update "$SIGN_UPDATE" --output build/personal/release
+                --source-sha "$SOURCE_SHA")
           if [[ "$LIBRARY_EXCEPTION" == true ]]; then
-            FLAGS+=(--allow-adhoc-library-validation-exception)
+            ARGS+=(--allow-adhoc-library-validation-exception)
           fi
-          python3 Scripts/personal-release.py \
-            --app 'build/personal/DerivedData/Build/Products/Release/BoringNotch Personal.app' \
-            --sign-update "$SIGN_UPDATE" --output build/personal/release \
-            --source-sha "$SOURCE_SHA" "${FLAGS[@]}"
-      - name: Upload packaged preview
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: personal-unsigned-${{ inputs.source_sha }}
-          path: build/personal/BoringNotch-Personal-unsigned.zip
-          if-no-files-found: error
-          retention-days: 14
+          python3 Scripts/personal-release.py "${ARGS[@]}"
       - name: Upload signed release allowlist
         if: inputs.sign_release || inputs.publish
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
