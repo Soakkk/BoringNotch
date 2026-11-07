@@ -140,7 +140,7 @@ struct MusicControlsView: View {
                 font: .subheadline,
                 nsFont: .subheadline,
                 textColor: theme.secondary,
-                frameWidth: width, isPlaying: musicManager.isPlaying
+                frameWidth: width, isPlaying: musicManager.isPlaying && energy.allowsDecorativeAnimation
             )
             .fontWeight(.medium)
             .help(musicManager.songTitle + " · " + musicManager.artistName)
@@ -169,7 +169,7 @@ struct MusicControlsView: View {
                         font: .subheadline,
                         nsFont: .subheadline,
                         textColor: musicManager.isFetchingLyrics ? .gray.opacity(0.7) : .gray,
-                        frameWidth: width, isPlaying: musicManager.isPlaying
+                        frameWidth: width, isPlaying: musicManager.isPlaying && energy.allowsDecorativeAnimation
                     )
                     .font(isPersian ? .custom("Vazirmatn-Regular", size: NSFont.preferredFont(forTextStyle: .subheadline).pointSize) : .subheadline)
                     .lineLimit(1)
