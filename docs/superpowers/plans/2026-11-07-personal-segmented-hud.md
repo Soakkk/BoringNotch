@@ -33,11 +33,11 @@
 
 **Interfaces:** `SegmentedLevel` supplies sanitized unit values, twenty-segment display counts, and continuous drag input. `SegmentedLevelBar` consumes value binding, appearance options, animation permission and one change callback. `SegmentedHUD` composes label, symbol, percentage and meter for standard/compact presentation.
 
-- [ ] Write and run native regression checks for input endpoints, fractional drag, invalid dimensions/values and single callback delivery; observe failure before implementation.
-- [ ] Implement the shared view; connect all HUD surfaces and the existing energy policy. Preserve microphone rendering and input semantics.
-- [ ] Render native standard/compact/inline fixtures at zero, normal and full values; inspect them together.
-- [ ] Run `bash TestsPersonal/run-segmented-hud-tests.sh`, existing energy and decoration tests. Expected: every assertion passes, no clipping in native fixtures.
-- [ ] Commit the feature and obtain an independent review of the branch.
+- [x] Write and run native regression checks for input endpoints, fractional drag, invalid dimensions/values and single callback delivery; observe failure before implementation.
+- [x] Implement the shared view; connect all HUD surfaces and the existing energy policy. Preserve microphone rendering and input semantics.
+- [x] Render native standard/compact/inline fixtures at zero, normal and full values; inspect them together.
+- [x] Run `bash TestsPersonal/run-segmented-hud-tests.sh`, existing energy and decoration tests. Expected: every assertion passes, no clipping in native fixtures.
+- [x] Commit the feature and obtain an independent review of the branch.
 
 ### Task 2: Signed release, local installation and publication
 
@@ -45,8 +45,17 @@
 
 **Interfaces:** Release version `3.1.2`, build `301002`, existing five-file signed release allowlist and pinned Sparkle key.
 
-- [ ] Run appropriate existing regressions, release-signature and publication-guard checks; expected all pass.
-- [ ] Build the reviewed commit through `personal-build.yml` with publication disabled. Verify archive/feed signatures, hashes, identifiers and universal app/helper.
+- [x] Run appropriate existing regressions, release-signature and publication-guard checks; expected all pass.
+- [x] Build the reviewed commit through `personal-build.yml` with publication disabled. Verify archive/feed signatures, hashes, identifiers and universal app/helper.
 - [ ] Back up the current installation, gracefully quit, replace the same app and relaunch. Verify indicator settings, restored permissions, normal panel behavior and resource use.
-- [ ] Merge reviewed source, publish five verified assets, then activate the exact signed feed bytes last. Verify anonymous downloads and feed.
+- [x] Merge reviewed source, publish five verified assets, then activate the exact signed feed bytes last. Verify anonymous downloads and feed.
 - [ ] Record installed version, checks and any remaining user-only hardware-key verification.
+
+## Release evidence and pending local verification
+
+- Reviewed source: `993a316d6965671b22224b46d2f38441e6a02cd1`; PR [#4](https://github.com/Soakkk/BoringNotch/pull/4) merged.
+- Universal build and signed packaging: [run 42395876685](https://github.com/Soakkk/BoringNotch/actions/runs/42395876685), successful.
+- 27 native HUD checks and seven native render fixtures; energy 24, decoration 25, adaptive layout 14, music 8. The independent review's unsafe inline percentage conversion was fixed with a failing regression first.
+- [Personal 3.1.2](https://github.com/Soakkk/BoringNotch/releases/tag/personal-v3.1.2) has the five expected assets. Anonymous downloads match local SHA-256 hashes. The active feed matches the signed release bytes and verifies with the pinned Ed25519 key.
+- Local version 3.1.2/build 301002 replaces the existing Applications copy; its source marker, universal app/helper, deep code signature, sandbox and existing app-only library exception were verified. The previous copy is recoverable and preferences are preserved.
+- Local verification is **not yet complete**: macOS still associates Accessibility and Calendar authorization with the previous ad-hoc binary. The native renewal flow is paused at the user's Touch ID/password prompt. After authorization, re-add the current app, restore the existing calendar/reminder grants as needed, verify media-key HUDs and sample settled resource use. Publication is complete; these local checks remain outstanding.
