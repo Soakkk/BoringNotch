@@ -15,6 +15,7 @@ import SwiftUIIntrospect
 
 @MainActor
 struct ContentView: View {
+    @AppStorage("personalTheme") private var personalTheme: PersonalTheme = .esencial
     @EnvironmentObject var vm: BoringViewModel
     @ObservedObject var webcamManager = WebcamManager.shared
 
@@ -101,7 +102,7 @@ struct ContentView: View {
                         : cornerRadiusInsets.closed.bottom
                     )
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
-                    .background(.black)
+                    .background(vm.notchState == .open ? personalTheme.surface : .black)
                     .clipShape(currentNotchShape)
                     .overlay(alignment: .top) {
                         Rectangle()
