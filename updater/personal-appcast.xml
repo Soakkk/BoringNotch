@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0"><channel><title>BoringNotch Personal</title><link>https://github.com/Soakkk/BoringNotch</link><item><title>BoringNotch Personal 3.0.0</title><sparkle:version>300000</sparkle:version><sparkle:shortVersionString>3.0.0</sparkle:shortVersionString><sparkle:minimumSystemVersion>15.0.0</sparkle:minimumSystemVersion><pubDate>Sat, 07 Nov 2026 11:49:33 +0000</pubDate><description>Compact agenda and music, with quieter rendering. Personal ad-hoc build; source and GPL license included.</description><enclosure url="https://github.com/Soakkk/BoringNotch/releases/download/personal-v3.0.0/BoringNotch-Personal-3.0.0.zip" sparkle:edSignature="IU3XrOd0vOVaDKyiS9cGljR8OnxOYlJOrMMzKIFHNhrfgFVA/7+qAWDfNU2J7ErG6NnBbq8sWD45oLUiLGUPCg==" length="11187131" type="application/octet-stream"></enclosure></item></channel></rss><!-- sparkle-signatures:
+edSignature: zEkSmRl0R2K0u2xlgpvuosuqB+IzAr9LbEJiSRyrgaxI0ak66r98LY8O9lIC5RdHnXiKkjYnELGx7BwVrum2Cg==
+length: 1187
+-->
