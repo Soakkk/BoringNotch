@@ -83,8 +83,10 @@ struct InlineHUD: View {
                                 VolumeManager.shared.setAbsolute(Float32(v))
                             } else if type == .brightness {
                                 BrightnessManager.shared.setAbsolute(value: Float32(v))
+                            } else if type == .backlight {
+                                KeyboardBacklightManager.shared.setAbsolute(value: Float32(v))
                             }
-                        })
+                        }, accessibilityLabel: type.hudLabel)
                         if (type == .volume && value.isZero) {
                             Text("muted")
                                 .font(.caption)
